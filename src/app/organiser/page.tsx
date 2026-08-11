@@ -1,0 +1,553 @@
+"use client";
+
+import React, { useMemo, useState } from "react";
+import { EVENTS } from "@/lib/events";
+import { CATEGORIES, categoryBySlug } from "@/lib/categories";
+import { useApp } from "@/lib/store";
+import { formatDate, formatPrice } from "@/lib/format";
+import { eventAgeBadge } from "@/lib/age";
+
+interface Draft {
+  title: string;
+  description: string;
+  category: string;
+  intent: "fun" | "useful" | "both";
+  tags: string[];
+  suggestedAgeBand: string;
+  needsDeadline: boolean;
+  warnings: string[];
+}
+
+const AI_MARKER = (
+  <span className="pill bg-signal text-ink px-2.5 py-1 border border-ink">AI-generated — please check</span>
+);
+
+export default function OrganiserPage() {
+  const { ready, organiserSignedIn, setOrganiserSignedIn } = useApp();
+
+  if (!ready) return null;
+
+  if (!organiserSignedIn) {
+    return (
+      <div className="max-w-[640px] mx-auto px-6 py-16">
+        <h1 className="text-[28px] lg:text-[40px]">Organiser dashboard</h1>
+        <p className="mt-3 text-grey measure">
+          List events free, reach 13–25 year olds who are actually looking, and get tools that
+          write listings with you and catch age-band mistakes before they cost you attendees.
+        </p>
+        <div className="card mt-8 p-6">
+          <h2 className="text-[22px]">Sign in</h2>
+          <p className="mt-1 text-[13px] text-grey">
+            This demo signs you in as a sample organiser. In production this is real
+            authentication — every organiser tool checks it before doing anything.
+          </p>
+          <button
+            type="button"
+            onClick={() => setOrganiserSignedIn(true)}
+            className="mt-4 min-h-[48px] px-6 rounded-full bg-ink text-paper font-display font-semibold"
+          >
+            Sign in as demo organiser
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return <Dashboard onSignOut={() => setOrganiserSignedIn(false)} />;
+}
+
+function Dashboard({ onSignOut }: { onSignOut: () => void }) {
+  return (
+    <div className="max-w-[1200px] mx-auto px-6 py-8">
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-[28px] lg:text-[40px]">Your events</h1>
+        <button type="button" onClick={onSignOut} className="text-[14px] underline text-grey">
+          Sign out
+        </button>
+      </div>
+
+      <div className="mt-8 grid gap-8 lg:grid-cols-2">
+        <ListingAssistant />
+        <div className="grid gap-8 content-start">
+          <BalanceMonitor />
+          <EligibilityChecker />
+        </div>
+      </div>
+
+      <div className="mt-8 grid gap-8 lg:grid-cols-2">
+        <PricingGuidance />
+        <PerformanceSummary />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function ListingAssistant() {
+  const [rough, setRough] = useState("");
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [previous, setPrevious] = useState<Draft | null>(null);
+  const [manual, setManual] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [deadline, setDeadline] = useState("");
+
+  const generate = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/organiser/assist", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-demo-organiser": "true" },
+        body: JSON.stringify({ rough }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "That didn’t work — try again.");
+        return;
+      }
+      setPrevious(draft);
+      setDraft(data.draft as Draft);
+    } catch {
+      setError("That didn’t work — check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="card p-6" aria-labelledby="assistant-heading">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h2 id="assistant-heading" className="text-[22px]">
+          Listing assistant
+        </h2>
+        <button type="button" className="text-[13px] underline text-grey" onClick={() => setManual(!manual)}>
+          {manual ? "Use the assistant" : "Write it manually instead"}
+        </button>
+      </div>
+
+      {manual ? (
+        <ManualListingForm />
+      ) : (
+        <>
+          <label htmlFor="rough" className="mt-3 block text-[14px] text-grey">
+            Describe your event roughly — a sentence or a paragraph, however it comes out.
+          </label>
+          <textarea
+            id="rough"
+            value={rough}
+            onChange={(e) => setRough(e.target.value)}
+            rows={4}
+            className="mt-2 w-full rounded-xl border border-line bg-white p-3 text-[14px]"
+            placeholder="e.g. friday night football under lights at the leisure centre, all welcome, £2, bar for parents"
+          />
+          <button
+            type="button"
+            onClick={generate}
+            disabled={busy || rough.trim().length < 10}
+            className="mt-3 min-h-[44px] px-6 rounded-full bg-ink text-paper font-medium text-[14px] disabled:opacity-40"
+          >
+            {busy ? "Drafting…" : draft ? "Redraft" : "Draft the listing"}
+          </button>
+          {error && <p className="mt-2 text-[13px] text-coral">{error}</p>}
+
+          {draft && (
+            <div className="mt-5 border-t border-line pt-5">
+              <div className="flex items-center gap-3 flex-wrap">
+                {AI_MARKER}
+                {previous && (
+                  <button
+                    type="button"
+                    className="text-[13px] underline"
+                    onClick={() => {
+                      setDraft(previous);
+                      setPrevious(null);
+                    }}
+                  >
+                    Undo — back to previous draft
+                  </button>
+                )}
+              </div>
+
+              {draft.warnings.map((w, i) => (
+                <p key={i} className="mt-3 text-[13px] text-coral font-medium">
+                  ⚠ {w}
+                </p>
+              ))}
+
+              <div className="mt-4 grid gap-3">
+                <EditableField
+                  label={`Title (${draft.title.length}/60)`}
+                  value={draft.title}
+                  onChange={(v) => setDraft({ ...draft, title: v.slice(0, 60) })}
+                />
+                <label className="text-[13px] font-semibold">
+                  Description
+                  <textarea
+                    value={draft.description}
+                    onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                    rows={6}
+                    className="mt-1 w-full rounded-xl border border-line bg-white p-3 text-[14px] font-normal"
+                  />
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-[13px] font-semibold">
+                    Category
+                    <select
+                      value={draft.category}
+                      onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+                      className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal"
+                    >
+                      {CATEGORIES.map((c) => (
+                        <option key={c.slug} value={c.slug}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-[13px] font-semibold">
+                    Intent tag
+                    <select
+                      value={draft.intent}
+                      onChange={(e) => setDraft({ ...draft, intent: e.target.value as Draft["intent"] })}
+                      className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal"
+                    >
+                      <option value="fun">Fun</option>
+                      <option value="useful">Useful</option>
+                      <option value="both">Both</option>
+                    </select>
+                  </label>
+                </div>
+                <EditableField
+                  label="Suggested age band"
+                  value={draft.suggestedAgeBand}
+                  onChange={(v) => setDraft({ ...draft, suggestedAgeBand: v })}
+                />
+                <EditableField
+                  label="Tags"
+                  value={draft.tags.join(", ")}
+                  onChange={(v) => setDraft({ ...draft, tags: v.split(",").map((t) => t.trim()).filter(Boolean) })}
+                />
+                {draft.needsDeadline && (
+                  <label className="text-[13px] font-semibold">
+                    Application or booking deadline{" "}
+                    <span className="font-normal text-grey">
+                      — separate from the event date; it’s what people miss
+                    </span>
+                    <input
+                      type="date"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                      className="mt-1 block h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal"
+                    />
+                  </label>
+                )}
+              </div>
+              <button
+                type="button"
+                className="mt-4 min-h-[48px] px-6 rounded-full bg-signal text-ink border border-ink font-display font-semibold disabled:opacity-40"
+                disabled
+                title="Publishing is disabled in this demo"
+              >
+                Review and publish
+              </button>
+              <p className="mt-2 text-[12px] text-grey">
+                Nothing publishes automatically — you review every field first. (Publishing is
+                disabled in this demo.)
+              </p>
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function EditableField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="text-[13px] font-semibold">
+      {label}
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal"
+      />
+    </label>
+  );
+}
+
+function ManualListingForm() {
+  return (
+    <div className="mt-4 grid gap-3">
+      <p className="text-[13px] text-grey">
+        The manual path — every field, no assistant. Same review before anything publishes.
+      </p>
+      <EditableStatic label="Title (max 60 characters)" />
+      <label className="text-[13px] font-semibold">
+        Description
+        <textarea rows={5} className="mt-1 w-full rounded-xl border border-line bg-white p-3 text-[14px] font-normal" />
+      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="text-[13px] font-semibold">
+          Category
+          <select className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal">
+            {CATEGORIES.map((c) => (
+              <option key={c.slug}>{c.name}</option>
+            ))}
+          </select>
+        </label>
+        <label className="text-[13px] font-semibold">
+          Intent tag
+          <select className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal">
+            <option>Fun</option>
+            <option>Useful</option>
+            <option>Both</option>
+          </select>
+        </label>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="text-[13px] font-semibold">
+          Event date
+          <input type="date" className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal" />
+        </label>
+        <label className="text-[13px] font-semibold">
+          Application deadline
+          <input type="date" className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal" />
+        </label>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <EditableStatic label="Minimum age" />
+        <EditableStatic label="Maximum age (optional)" />
+      </div>
+      <button
+        type="button"
+        className="min-h-[48px] px-6 rounded-full bg-signal text-ink border border-ink font-display font-semibold disabled:opacity-40"
+        disabled
+        title="Publishing is disabled in this demo"
+      >
+        Review and publish
+      </button>
+    </div>
+  );
+}
+
+function EditableStatic({ label }: { label: string }) {
+  return (
+    <label className="text-[13px] font-semibold">
+      {label}
+      <input className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal" />
+    </label>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function BalanceMonitor() {
+  const { fun, useful, both, funShare, usefulShare, flagged } = useMemo(() => {
+    const fun = EVENTS.filter((e) => e.intent === "fun").length;
+    const useful = EVENTS.filter((e) => e.intent === "useful").length;
+    const both = EVENTS.filter((e) => e.intent === "both").length;
+    const total = EVENTS.length;
+    // "both" counts toward each side — that's the point of it
+    const funShare = (fun + both) / total;
+    const usefulShare = (useful + both) / total;
+    return { fun, useful, both, funShare, usefulShare, flagged: funShare < 0.35 || usefulShare < 0.35 };
+  }, []);
+
+  return (
+    <section className="card p-6" aria-labelledby="balance-heading">
+      <h2 id="balance-heading" className="text-[22px]">
+        Balance monitor
+      </h2>
+      <p className="mt-1 text-[13px] text-grey measure">
+        The live feed must stay a real mix of fun and useful — it’s a product requirement, not an
+        accident of who signs up. Either side under ~35% flags to the team.
+      </p>
+      <div className="mt-4 space-y-3">
+        <Bar label={`Fun (${fun} + ${both} both)`} share={funShare} />
+        <Bar label={`Useful (${useful} + ${both} both)`} share={usefulShare} />
+      </div>
+      <p className={`mt-3 text-[14px] font-medium ${flagged ? "text-coral" : ""}`}>
+        {flagged
+          ? "⚠ The mix has drifted — one side is under 35% of the local feed."
+          : "Herts & commuter belt: the mix is healthy."}
+      </p>
+    </section>
+  );
+}
+
+function Bar({ label, share }: { label: string; share: number }) {
+  const pct = Math.round(share * 100);
+  return (
+    <div>
+      <div className="flex justify-between text-[13px]">
+        <span>{label}</span>
+        <span className="font-semibold">{pct}%</span>
+      </div>
+      <div className="mt-1 h-3 rounded-full bg-line overflow-hidden">
+        <div className="h-full bg-ink rounded-full" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function EligibilityChecker() {
+  const issues = useMemo(() => {
+    // Flags listings whose stated age band contradicts the description —
+    // organisers cause the age-mismatch problem; this catches it at source.
+    const found: { title: string; note: string }[] = [];
+    for (const e of EVENTS) {
+      const text = e.description.toLowerCase();
+      const adultSignals = /\b(bar|licensed|alcohol|club night|bring id)\b/.test(text);
+      if (adultSignals && e.minAge < 18) {
+        found.push({
+          title: e.title,
+          note: `Description mentions ID/alcohol but the band is ${eventAgeBadge(e)} — check which is right.`,
+        });
+      }
+      const under18Signals = /\byear (7|8|9|10|11)\b|school students only/.test(text);
+      if (under18Signals && (e.maxAge === undefined || e.maxAge > 18)) {
+        found.push({
+          title: e.title,
+          note: `Description sounds school-age but the band allows over-18s — add a maximum age?`,
+        });
+      }
+    }
+    return found;
+  }, []);
+
+  return (
+    <section className="card p-6" aria-labelledby="eligibility-heading">
+      <div className="flex items-center gap-3 flex-wrap">
+        <h2 id="eligibility-heading" className="text-[22px]">
+          Eligibility checker
+        </h2>
+        {AI_MARKER}
+      </div>
+      <p className="mt-1 text-[13px] text-grey measure">
+        Scans your live listings for age bands that contradict their descriptions.
+      </p>
+      {issues.length === 0 ? (
+        <p className="mt-4 text-[14px]">No contradictions found across your live listings.</p>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {issues.map((i, idx) => (
+            <li key={idx} className="text-[14px]">
+              <span className="font-medium">{i.title}</span>
+              <span className="block text-[13px] text-coral">{i.note}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function PricingGuidance() {
+  const rows = useMemo(() => {
+    return CATEGORIES.map((c) => {
+      const inCat = EVENTS.filter((e) => e.category === c.slug);
+      if (inCat.length === 0) return null;
+      const free = inCat.filter((e) => e.price === 0).length;
+      const paid = inCat.filter((e) => e.price > 0);
+      const median = paid.length
+        ? paid.map((e) => e.price).sort((a, b) => a - b)[Math.floor(paid.length / 2)]
+        : 0;
+      return { name: c.name, count: inCat.length, freeShare: free / inCat.length, median };
+    }).filter(Boolean) as { name: string; count: number; freeShare: number; median: number }[];
+  }, []);
+
+  return (
+    <section className="card p-6" aria-labelledby="pricing-heading">
+      <div className="flex items-center gap-3 flex-wrap">
+        <h2 id="pricing-heading" className="text-[22px]">
+          Pricing guidance
+        </h2>
+        {AI_MARKER}
+      </div>
+      <p className="mt-1 text-[13px] text-grey measure">
+        Similar events by category in your area. Most of this audience spends nothing — where the
+        data supports free or low-cost, go free: attendance follows.
+      </p>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="text-left text-grey border-b border-line">
+              <th className="py-2 pr-4 font-medium">Category</th>
+              <th className="py-2 pr-4 font-medium">Listings</th>
+              <th className="py-2 pr-4 font-medium">Free</th>
+              <th className="py-2 font-medium">Median paid</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.name} className="border-b border-line last:border-0">
+                <td className="py-2 pr-4">{r.name}</td>
+                <td className="py-2 pr-4">{r.count}</td>
+                <td className="py-2 pr-4">{Math.round(r.freeShare * 100)}%</td>
+                <td className="py-2">{r.median === 0 ? "—" : formatPrice(r.median)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function PerformanceSummary() {
+  const nextClash = useMemo(() => {
+    const sorted = [...EVENTS].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    for (let i = 1; i < sorted.length; i++) {
+      const a = sorted[i - 1];
+      const b = sorted[i];
+      if (formatDate(a.date) === formatDate(b.date) && a.category === b.category) {
+        return { a: a.title, b: b.title, date: formatDate(a.date) };
+      }
+    }
+    return null;
+  }, []);
+
+  return (
+    <section className="card p-6" aria-labelledby="performance-heading">
+      <div className="flex items-center gap-3 flex-wrap">
+        <h2 id="performance-heading" className="text-[22px]">
+          Performance & timing
+        </h2>
+        {AI_MARKER}
+      </div>
+      <div className="mt-4 space-y-4 text-[14px] measure">
+        <div>
+          <h3 className="text-[15px] font-semibold">Last 30 days, in plain English</h3>
+          <p className="mt-1 text-grey">
+            Views climbed steadily until your application deadline, then dropped off a cliff — 60%
+            of clicks came from shared links, not search. Most drop-off happens on listings with no
+            journey-time information.
+          </p>
+        </div>
+        <div>
+          <h3 className="text-[15px] font-semibold">Three things to try</h3>
+          <ul className="mt-1 list-disc pl-5 text-grey space-y-1">
+            <li>Add public-transport journey time to your two listings missing it.</li>
+            <li>Your Saturday events outperform weekdays 3:1 — move the workshop series.</li>
+            <li>GCSE results day is in your next window — avoid the morning, evenings are fine.</li>
+          </ul>
+        </div>
+        {nextClash && (
+          <p className="text-[13px] text-coral">
+            ⚠ Timing clash: “{nextClash.a}” and “{nextClash.b}” are both {nextClash.date} in the
+            same category.
+          </p>
+        )}
+        <p className="text-[12px] text-grey">
+          Image alt text is generated on upload and editable in each listing’s media panel.
+        </p>
+      </div>
+    </section>
+  );
+}
