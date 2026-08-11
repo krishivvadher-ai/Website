@@ -7,18 +7,20 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { EVENTS } from "@/lib/events";
 import { DEFAULT_FILTERS, type Filters, type OnTrackEvent } from "@/lib/types";
 import { applyFilters } from "@/lib/filter";
-import { DEFAULT_LOCATION, distanceMiles } from "@/lib/geo";
+import { DEFAULT_LOCATION } from "@/lib/geo";
 import { useApp } from "@/lib/store";
 import { useIsDesktop } from "@/lib/useMediaQuery";
 import { IntentToggle } from "@/components/IntentToggle";
 import { EventCard } from "@/components/EventCard";
+import { FilterSheet, MobileChipRow } from "@/components/FilterControls";
 import { CATEGORIES } from "@/lib/categories";
 import { formatDate, formatPrice } from "@/lib/format";
 import { eventAgeBadge } from "@/lib/age";
 import { CardImage } from "@/components/CardImage";
 
 // Map style: OpenStreetMap raster tiles — no API key anywhere near the
-// client, per the security requirements. Custom HTML pins carry the price.
+// client, per the security requirements. Pins are native MapLibre markers
+// (DOM buttons), so the map itself positions them during pan and zoom.
 const MAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
@@ -31,22 +33,6 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
   },
   layers: [{ id: "osm", type: "raster", source: "osm" }],
 };
-
-interface PinPoint {
-  event: OnTrackEvent;
-  x: number;
-  y: number;
-}
-interface Cluster {
-  x: number;
-  y: number;
-  events: OnTrackEvent[];
-}
-interface Centre {
-  lat: number;
-  lng: number;
-  label: string;
-}
 
 /** Circle polygon for the distance radius, drawn live with the slider. */
 function circleGeoJSON(lat: number, lng: number, miles: number): GeoJSON.Feature<GeoJSON.Polygon> {
@@ -72,7 +58,6 @@ export function MapClient() {
   const isDesktop = useIsDesktop();
   // Shared state lives here so it survives the desktop↔mobile remount
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const [centre, setCentre] = useState<Centre>(DEFAULT_LOCATION);
 
   // The map must not initialise until we know which layout it lives in —
   // initialising into one container and re-parenting breaks the canvas.
@@ -90,8 +75,6 @@ export function MapClient() {
       isDesktop={isDesktop}
       filters={filters}
       setFilters={setFilters}
-      centre={centre}
-      setCentre={setCentre}
     />
   );
 }
@@ -100,58 +83,69 @@ function MapView({
   isDesktop,
   filters,
   setFilters,
-  centre,
-  setCentre,
 }: {
   isDesktop: boolean;
   filters: Filters;
   setFilters: (f: Filters) => void;
-  centre: Centre;
-  setCentre: (c: Centre) => void;
 }) {
   const { profile } = useApp();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [showSearchArea, setShowSearchArea] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [locNote, setLocNote] = useState(false);
-  const [mapInit, setMapInit] = useState(false); // map object exists — pins can project
-  const [mapReady, setMapReady] = useState(false); // style loaded — layers can be added
+  const [mapFailed, setMapFailed] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+  const [zoomStamp, setZoomStamp] = useState(0);
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const markersRef = useRef<maplibregl.Marker[]>([]);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const centreRef = useRef(centre);
-  centreRef.current = centre;
-  const [viewStamp, setViewStamp] = useState(0);
+  const selectRef = useRef<(id: string, pan: boolean) => void>(() => {});
 
   const { events } = useMemo(
-    () => applyFilters(EVENTS, filters, profile, centre),
-    [filters, profile, centre]
+    () => applyFilters(EVENTS, filters, profile, DEFAULT_LOCATION),
+    [filters, profile]
   );
 
   // --- map lifecycle -------------------------------------------------------
   useEffect(() => {
     const container = mapContainer.current;
     if (!container) return;
-    const map = new maplibregl.Map({
-      container,
-      style: MAP_STYLE,
-      center: [DEFAULT_LOCATION.lng, DEFAULT_LOCATION.lat],
-      zoom: 9,
-      attributionControl: { compact: true },
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container,
+        style: MAP_STYLE,
+        center: [DEFAULT_LOCATION.lng, DEFAULT_LOCATION.lat],
+        zoom: 6,
+        attributionControl: { compact: true },
+      });
+    } catch {
+      // No WebGL on this device/browser — fail to a usable page, not a blank one
+      setMapFailed(true);
+      return;
+    }
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), isDesktop ? "top-right" : "bottom-right");
+    map.on("error", () => {
+      // tile errors etc. — the map stays interactive; never crash the page
     });
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     mapRef.current = map;
 
-    const rerender = () => setViewStamp((n) => n + 1);
-    map.on("move", rerender);
-
-    // Fit the whole UK immediately — pins must not wait for tiles, which can
-    // be slow or blocked without breaking the rest of the map
+    // Show the whole UK with every pin clear of the floating UI
     const bounds = eventsBounds(EVENTS);
-    if (bounds) map.fitBounds(bounds, { padding: 60, maxZoom: 10, duration: 0 });
-    setMapInit(true);
+    if (bounds) {
+      map.fitBounds(bounds, {
+        padding: isDesktop
+          ? { top: 80, bottom: 80, left: 80, right: 80 }
+          : { top: 210, bottom: 190, left: 44, right: 44 },
+        duration: 0,
+      });
+    }
 
+    // Clustering only changes with zoom, so markers rebuild on zoomend;
+    // panning is handled natively by MapLibre moving the markers.
+    map.on("zoomend", () => setZoomStamp((n) => n + 1));
     map.on("load", () => {
       map.addSource("radius", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
@@ -167,32 +161,23 @@ function MapView({
         paint: { "line-color": "#111111", "line-opacity": 0.35, "line-width": 1.5, "line-dasharray": [2, 2] },
       });
       setMapReady(true);
-      rerender();
-    });
-    map.on("moveend", () => {
-      const c = map.getCenter();
-      const b = map.getBounds();
-      // "Search this area" appears once the user has panned meaningfully
-      // relative to what's on screen, at any zoom level
-      const viewSpan = distanceMiles(b.getNorth(), b.getWest(), b.getNorth(), b.getEast());
-      const moved = distanceMiles(c.lat, c.lng, centreRef.current.lat, centreRef.current.lng);
-      setShowSearchArea(moved > Math.max(2, viewSpan * 0.2));
     });
 
-    // Keep the canvas matched to its container — split panes and mobile
-    // browser chrome both resize it after init
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(container);
 
     return () => {
       ro.disconnect();
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDesktop]);
 
-  // Radius circle follows the slider and the search centre (only when a
-  // radius is actually set — the default is the whole UK)
+  // Radius circle follows the slider (only when a radius is set — the
+  // default is the whole UK)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -201,45 +186,9 @@ function MapView({
     if (filters.distanceMiles === null) {
       src.setData({ type: "FeatureCollection", features: [] });
     } else {
-      src.setData(circleGeoJSON(centre.lat, centre.lng, filters.distanceMiles));
+      src.setData(circleGeoJSON(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, filters.distanceMiles));
     }
-  }, [centre, filters.distanceMiles, mapReady]);
-
-  // --- clustering (screen-space, recomputed whenever the view moves) -------
-  const { pins, clusters } = useMemo(() => {
-    void viewStamp;
-    const map = mapRef.current;
-    const pins: PinPoint[] = [];
-    const clusters: Cluster[] = [];
-    if (!map || !mapInit) return { pins, clusters };
-    const CLUSTER_PX = 56;
-    const points: PinPoint[] = events.map((event) => {
-      const p = map.project([event.venue.lng, event.venue.lat]);
-      return { event, x: p.x, y: p.y };
-    });
-    const taken = new Set<number>();
-    for (let i = 0; i < points.length; i++) {
-      if (taken.has(i)) continue;
-      const group = [points[i]];
-      for (let j = i + 1; j < points.length; j++) {
-        if (taken.has(j)) continue;
-        if (Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y) < CLUSTER_PX) {
-          group.push(points[j]);
-          taken.add(j);
-        }
-      }
-      if (group.length > 1) {
-        clusters.push({
-          x: group.reduce((s, g) => s + g.x, 0) / group.length,
-          y: group.reduce((s, g) => s + g.y, 0) / group.length,
-          events: group.map((g) => g.event),
-        });
-      } else {
-        pins.push(points[i]);
-      }
-    }
-    return { pins, clusters };
-  }, [events, mapInit, viewStamp]);
+  }, [filters.distanceMiles, mapReady]);
 
   const selectEvent = useCallback(
     (id: string | null, pan = false) => {
@@ -254,22 +203,73 @@ function MapView({
     },
     [events]
   );
+  selectRef.current = (id, pan) => selectEvent(id, pan);
 
-  const searchThisArea = () => {
+  // --- markers: cluster in screen space, then hand DOM buttons to MapLibre --
+  useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-    const c = map.getCenter();
-    setCentre({ lat: c.lat, lng: c.lng, label: "Map area" });
-    setShowSearchArea(false);
-  };
+    if (!map || mapFailed) return;
+
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+
+    const CLUSTER_PX = 52;
+    const points = events.map((event) => ({ event, p: map.project([event.venue.lng, event.venue.lat]) }));
+    const taken = new Set<number>();
+    const singles: OnTrackEvent[] = [];
+    const clusters: { events: OnTrackEvent[] }[] = [];
+    for (let i = 0; i < points.length; i++) {
+      if (taken.has(i)) continue;
+      const group = [points[i]];
+      for (let j = i + 1; j < points.length; j++) {
+        if (taken.has(j)) continue;
+        if (Math.hypot(points[i].p.x - points[j].p.x, points[i].p.y - points[j].p.y) < CLUSTER_PX) {
+          group.push(points[j]);
+          taken.add(j);
+        }
+      }
+      if (group.length > 1) clusters.push({ events: group.map((g) => g.event) });
+      else singles.push(points[i].event);
+    }
+
+    for (const c of clusters) {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "map-cluster";
+      el.textContent = String(c.events.length);
+      el.setAttribute("aria-label", `${c.events.length} events here — zoom in`);
+      const lat = c.events.reduce((s, e) => s + e.venue.lat, 0) / c.events.length;
+      const lng = c.events.reduce((s, e) => s + e.venue.lng, 0) / c.events.length;
+      el.addEventListener("click", () => {
+        map.easeTo({ center: [lng, lat], zoom: map.getZoom() + 2, duration: 300 });
+      });
+      markersRef.current.push(new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map));
+    }
+
+    for (const event of singles) {
+      const el = document.createElement("button");
+      el.type = "button";
+      const active = selectedId === event.id || hoveredId === event.id;
+      el.className = `map-pin ${active ? "map-pin-selected" : event.price === 0 ? "map-pin-free" : "map-pin-paid"}`;
+      el.textContent = formatPrice(event.price);
+      el.setAttribute("aria-label", `${event.title}, ${formatPrice(event.price)}, ${eventAgeBadge(event)}`);
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectRef.current(event.id, !isDesktop);
+      });
+      el.addEventListener("mouseenter", () => setHoveredId(event.id));
+      el.addEventListener("mouseleave", () => setHoveredId(null));
+      const marker = new maplibregl.Marker({ element: el }).setLngLat([event.venue.lng, event.venue.lat]).addTo(map);
+      if (active) el.style.zIndex = "30";
+      markersRef.current.push(marker);
+    }
+  }, [events, selectedId, hoveredId, mapFailed, zoomStamp, isDesktop, mapReady]);
 
   const useMyLocation = () => {
     setLocNote(false);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const next = { lat: pos.coords.latitude, lng: pos.coords.longitude, label: "Your location" };
-        setCentre(next);
-        mapRef.current?.easeTo({ center: [next.lng, next.lat], zoom: 11, duration: 300 });
+        mapRef.current?.easeTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 11, duration: 400 });
       },
       () => setLocNote(false)
     );
@@ -284,135 +284,60 @@ function MapView({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Swiping the mobile carousel pans the map to the centred card
+  useEffect(() => {
+    if (isDesktop) return;
+    const el = carouselRef.current;
+    if (!el) return;
+    let timer: number | undefined;
+    const onScroll = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const mid = el.scrollLeft + el.clientWidth / 2;
+        let best: { id: string; dist: number } | null = null;
+        el.querySelectorAll<HTMLElement>("[data-carousel-id]").forEach((card) => {
+          const centre = card.offsetLeft + card.offsetWidth / 2;
+          const dist = Math.abs(centre - mid);
+          if (!best || dist < best.dist) best = { id: card.dataset.carouselId!, dist };
+        });
+        if (best) {
+          const found = events.find((e) => e.id === best!.id);
+          if (found) {
+            setSelectedId(found.id);
+            mapRef.current?.easeTo({ center: [found.venue.lng, found.venue.lat], duration: 300 });
+          }
+        }
+      }, 160);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      el.removeEventListener("scroll", onScroll);
+    };
+  }, [isDesktop, events]);
+
   const selected = events.find((e) => e.id === selectedId) ?? null;
 
-  const pinOverlay = (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-label="Event pins">
-      {clusters.map((c, i) => (
-        <button
-          key={`cluster-${i}`}
-          type="button"
-          className="map-cluster absolute pointer-events-auto -translate-x-1/2 -translate-y-1/2"
-          style={{ left: c.x, top: c.y }}
-          aria-label={`${c.events.length} events here — zoom in`}
-          onClick={() => {
-            mapRef.current?.easeTo({
-              center: [c.events[0].venue.lng, c.events[0].venue.lat],
-              zoom: (mapRef.current?.getZoom() ?? 9) + 2,
-              duration: 300,
-            });
-          }}
+  const mapFallback = mapFailed && (
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-paper p-6">
+      <div className="card p-8 max-w-[420px] text-center bg-white">
+        <h2 className="text-[22px]">The map can’t load here</h2>
+        <p className="mt-2 text-[14px] text-grey">
+          This browser or device doesn’t support the graphics the map needs (WebGL). Everything is
+          still in the list view.
+        </p>
+        <Link
+          href="/browse"
+          className="mt-4 inline-flex items-center min-h-[44px] px-6 rounded-full bg-signal text-ink border border-ink font-display font-semibold"
         >
-          {c.events.length}
-        </button>
-      ))}
-      {pins.map(({ event, x, y }) => {
-        const isSelected = selectedId === event.id || hoveredId === event.id;
-        return (
-          <button
-            key={event.id}
-            type="button"
-            className={`map-pin absolute pointer-events-auto -translate-x-1/2 -translate-y-1/2 ${
-              isSelected ? "map-pin-selected" : event.price === 0 ? "map-pin-free" : "map-pin-paid"
-            }`}
-            style={{ left: x, top: y, zIndex: isSelected ? 30 : 10 }}
-            aria-label={`${event.title}, ${formatPrice(event.price)}, ${eventAgeBadge(event)}`}
-            onClick={() => selectEvent(event.id, false)}
-            onMouseEnter={() => setHoveredId(event.id)}
-            onMouseLeave={() => setHoveredId(null)}
-          >
-            {formatPrice(event.price)}
-          </button>
-        );
-      })}
+          Browse the list
+        </Link>
+      </div>
     </div>
   );
 
-  const chipRow = (
-    <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
-      <button
-        type="button"
-        aria-pressed={filters.price.includes("free")}
-        onClick={() =>
-          setFilters({
-            ...filters,
-            price: filters.price.includes("free") ? filters.price.filter((p) => p !== "free") : [...filters.price, "free"],
-          })
-        }
-        className={`pill min-h-[44px] shrink-0 px-4 border ${
-          filters.price.includes("free") ? "bg-signal border-ink font-semibold" : "bg-white border-line"
-        }`}
-      >
-        Free
-      </button>
-      {CATEGORIES.map((c) => (
-        <button
-          key={c.slug}
-          type="button"
-          aria-pressed={filters.categories.includes(c.slug)}
-          onClick={() =>
-            setFilters({
-              ...filters,
-              categories: filters.categories.includes(c.slug)
-                ? filters.categories.filter((x) => x !== c.slug)
-                : [...filters.categories, c.slug],
-            })
-          }
-          className={`pill min-h-[44px] shrink-0 px-4 border whitespace-nowrap ${
-            filters.categories.includes(c.slug) ? "bg-signal border-ink font-semibold" : "bg-white border-line"
-          }`}
-        >
-          {c.name}
-        </button>
-      ))}
-    </div>
-  );
-
-  const searchAreaBtn = showSearchArea && (
-    <button
-      type="button"
-      onClick={searchThisArea}
-      className="absolute top-4 left-1/2 -translate-x-1/2 z-20 min-h-[44px] px-5 rounded-full bg-ink text-paper text-[14px] font-medium"
-    >
-      Search this area
-    </button>
-  );
-
-  const locationControls = (
-    <div className="flex items-center gap-2 flex-wrap">
-      <button
-        type="button"
-        onClick={() => (locNote ? useMyLocation() : setLocNote(true))}
-        className="min-h-[44px] px-4 rounded-full border border-line bg-white text-[13px] font-medium"
-      >
-        Use my location
-      </button>
-      {locNote && (
-        <span className="text-[12px] text-grey bg-white border border-line rounded-lg px-3 py-2">
-          Used once to centre the map — never stored.{" "}
-          <button type="button" className="underline text-ink" onClick={useMyLocation}>
-            OK
-          </button>
-        </span>
-      )}
-      <label className="flex items-center gap-2 text-[12px] text-grey bg-white border border-line rounded-full px-3 min-h-[44px]">
-        {filters.distanceMiles === null ? "Whole UK" : `${filters.distanceMiles} mi`}
-        <input
-          type="range"
-          min={1}
-          max={26}
-          value={filters.distanceMiles ?? 26}
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            setFilters({ ...filters, distanceMiles: v >= 26 ? null : v });
-          }}
-          className="w-24 accent-[#111111]"
-          aria-label={
-            filters.distanceMiles === null ? "Distance: whole UK" : `Distance: ${filters.distanceMiles} miles`
-          }
-        />
-      </label>
-    </div>
+  const zoomHint = (
+    <p className="text-[12px] text-grey">Drag to explore · numbered circles are groups, tap to zoom in</p>
   );
 
   // ---------------------------------------------------------------- desktop
@@ -421,12 +346,60 @@ function MapView({
       <div className="grid grid-cols-[45%_55%] h-[calc(100dvh-4rem)]">
         <div className="overflow-y-auto px-6 py-6 border-r border-line">
           <IntentToggle value={filters.intent} onChange={(intent) => setFilters({ ...filters, intent })} />
-          <div className="mt-4">{chipRow}</div>
-          <div className="mt-3">{locationControls}</div>
-          <p className="text-[13px] text-grey mt-4" role="status">
-            {events.length} event{events.length === 1 ? "" : "s"}{" "}
-            {filters.distanceMiles === null ? "across the UK" : `within ${filters.distanceMiles} miles`}
-          </p>
+          <div className="mt-4 flex gap-2 overflow-x-auto [scrollbar-width:none]">
+            <FilterChip
+              active={filters.price.includes("free")}
+              onClick={() =>
+                setFilters({
+                  ...filters,
+                  price: filters.price.includes("free")
+                    ? filters.price.filter((p) => p !== "free")
+                    : [...filters.price, "free"],
+                })
+              }
+            >
+              Free
+            </FilterChip>
+            {CATEGORIES.map((c) => (
+              <FilterChip
+                key={c.slug}
+                active={filters.categories.includes(c.slug)}
+                onClick={() =>
+                  setFilters({
+                    ...filters,
+                    categories: filters.categories.includes(c.slug)
+                      ? filters.categories.filter((x) => x !== c.slug)
+                      : [...filters.categories, c.slug],
+                  })
+                }
+              >
+                {c.name}
+              </FilterChip>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => (locNote ? useMyLocation() : setLocNote(true))}
+              className="min-h-[44px] px-4 rounded-full border border-line bg-white text-[13px] font-medium"
+            >
+              Use my location
+            </button>
+            {locNote && (
+              <span className="text-[12px] text-grey bg-white border border-line rounded-lg px-3 py-2">
+                Used once to centre the map — never stored.{" "}
+                <button type="button" className="underline text-ink" onClick={useMyLocation}>
+                  OK
+                </button>
+              </span>
+            )}
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-2">
+            <p className="text-[13px] text-grey" role="status">
+              {events.length} event{events.length === 1 ? "" : "s"} on the map
+            </p>
+            {zoomHint}
+          </div>
           <div className="mt-4 grid gap-6 pb-8">
             {events.map((e) => (
               <EventCard key={e.id} event={e} onHover={setHoveredId} highlighted={hoveredId === e.id || selectedId === e.id} />
@@ -434,15 +407,17 @@ function MapView({
             {events.length === 0 && (
               <div className="card p-8 text-center">
                 <h2 className="text-[20px]">No events match</h2>
-                <p className="mt-2 text-grey text-[14px]">Try the whole UK, or clear a filter.</p>
+                <p className="mt-2 text-grey text-[14px]">Clear a filter to see the map fill back up.</p>
               </div>
             )}
           </div>
         </div>
-        <div className="relative">
-          <div ref={mapContainer} className="absolute inset-0" />
-          {pinOverlay}
-          {searchAreaBtn}
+        <div className="relative h-full overflow-hidden">
+          {/* Explicit w/h — MapLibre's own .maplibregl-map class overrides
+              Tailwind positioning classes, so the container must be sized
+              directly or it collapses to 0 height */}
+          <div ref={mapContainer} className="w-full h-full" />
+          {mapFallback}
           {selected && (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 w-[320px] card overflow-hidden bg-white" role="dialog" aria-label={selected.title}>
               <Link href={`/events/${selected.slug}`}>
@@ -474,30 +449,32 @@ function MapView({
 
   // ----------------------------------------------------------------- mobile
   return (
-    <div className="relative h-dvh">
-      <div ref={mapContainer} className="absolute inset-0" />
-      {pinOverlay}
-      {searchAreaBtn}
+    <div className="relative h-dvh overflow-hidden">
+      <div ref={mapContainer} className="w-full h-full" />
+      {mapFallback}
 
-      {/* Filters and intent toggle float over the map */}
-      <div className="absolute top-0 inset-x-0 z-20 p-4 space-y-2 pointer-events-none [&>*]:pointer-events-auto">
-        <div className="flex items-center gap-2">
+      {/* Compact controls floating over the map */}
+      <div className="absolute top-0 inset-x-0 z-20 p-3 space-y-2 pointer-events-none [&>*]:pointer-events-auto">
+        <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none]">
           <Link
             href="/browse"
-            className="min-h-[44px] px-4 rounded-full bg-ink text-paper text-[13px] font-medium inline-flex items-center"
+            className="min-h-[44px] px-4 rounded-full bg-ink text-paper text-[13px] font-medium inline-flex items-center shrink-0"
           >
             List view
           </Link>
-          {locationControls}
+          <IntentToggle
+            className="shrink-0"
+            value={filters.intent}
+            onChange={(intent) => setFilters({ ...filters, intent })}
+          />
         </div>
-        <IntentToggle value={filters.intent} onChange={(intent) => setFilters({ ...filters, intent })} />
-        {chipRow}
+        <MobileChipRow filters={filters} onChange={setFilters} onOpenSheet={() => setSheetOpen(true)} />
       </div>
 
-      {/* Draggable card carousel across the bottom */}
+      {/* Card carousel above the tab bar; swiping pans the map */}
       <div
         ref={carouselRef}
-        className="absolute bottom-4 inset-x-0 z-20 flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 [scrollbar-width:none]"
+        className="absolute bottom-[68px] inset-x-0 z-20 flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-1 [scrollbar-width:none]"
       >
         {events.map((e) => (
           <div
@@ -518,7 +495,9 @@ function MapView({
                     {e.title}
                   </Link>
                 </h3>
-                <p className="mt-1 text-[12px] text-grey">{formatDate(e.date)}</p>
+                <p className="mt-1 text-[12px] text-grey">
+                  {formatDate(e.date)} · {e.venue.area}
+                </p>
                 <div className="mt-1 flex items-center gap-2">
                   <span className="pill bg-ink text-paper px-2 py-0.5">{eventAgeBadge(e)}</span>
                   <span className={e.price === 0 ? "pill bg-signal px-2 py-0.5 font-semibold" : "text-[13px] font-display font-semibold"}>
@@ -530,9 +509,32 @@ function MapView({
           </div>
         ))}
         {events.length === 0 && (
-          <div className="card p-4 bg-white text-[14px]">No events match — try the whole UK.</div>
+          <div className="card p-4 bg-white text-[14px]">No events match — clear a filter.</div>
         )}
       </div>
+
+      <FilterSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        filters={filters}
+        onChange={setFilters}
+        resultCount={events.length}
+      />
     </div>
+  );
+}
+
+function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`pill min-h-[44px] shrink-0 px-4 border whitespace-nowrap ${
+        active ? "bg-signal border-ink font-semibold" : "bg-white border-line"
+      }`}
+    >
+      {children}
+    </button>
   );
 }

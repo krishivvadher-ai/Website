@@ -154,7 +154,7 @@ h3,
 .map-pin-selected {
   background: var(--color-signal);
   color: var(--color-ink);
-  transform: scale(1.18);
+  font-size: 15px;
   z-index: 30;
 }
 .map-cluster {
@@ -175,4 +175,11 @@ h3,
 /* Safe-area inset for the fixed bottom tab bar */
 .tabbar-safe {
   padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* On mobile the map's zoom control must clear the card carousel and tab bar */
+@media (max-width: 1023px) {
+  .maplibregl-ctrl-bottom-right {
+    margin-bottom: 200px;
+  }
 }
