@@ -7,6 +7,7 @@ import { daysUntil, formatDate, formatPrice } from "@/lib/format";
 import { eventAgeBadge } from "@/lib/age";
 import { categoryBySlug } from "@/lib/categories";
 import { CategoryMotif, hashString, posterTheme } from "./CardImage";
+import { Logo } from "./Logo";
 import { useMounted } from "@/lib/useMediaQuery";
 
 // Hero slideshow: five promotions — one for onTrack itself, four for events
@@ -138,7 +139,8 @@ function PromoSlide({ active }: { active: boolean }) {
         </>
       }
     >
-      <p className="pill inline-block w-fit border border-paper/50 px-3 py-1">Across the UK · free to use</p>
+      <Logo light markClass="h-8 w-8" textClass="text-[30px] lg:text-[34px]" />
+      <p className="pill mt-5 inline-block w-fit border border-paper/50 px-3 py-1">Across the UK · free to use</p>
       <h1 className="mt-5 text-[36px] lg:text-[56px] max-w-[16ch] text-paper">Find things worth your time.</h1>
       <p className="mt-4 font-display font-semibold text-[18px] lg:text-[24px] text-signal">
         Find it. Fit it. Never miss it.

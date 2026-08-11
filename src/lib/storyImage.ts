@@ -84,12 +84,36 @@ export async function generateStoryImage(event: OnTrackEvent): Promise<Blob> {
   x = pill(eventAgeBadge(event), x, "#FBF9F5", "#111111");
   pill(formatPrice(event.price), x, "#D9FF3D", "#111111");
 
-  // Wordmark
-  ctx.font = '700 88px "Space Grotesk", sans-serif';
+  // Logo: disc mark + gradient wordmark
+  const markR = 40;
+  const markCx = 96 + markR;
+  const markCy = H - 180;
+  ctx.save();
   ctx.fillStyle = "#FBF9F5";
-  ctx.fillText("ontrack", 96, H - 220);
+  ctx.beginPath();
+  ctx.arc(markCx, markCy, markR, 0, Math.PI * 2);
+  ctx.fill();
+  // diagonal track cut and centre hole, drawn in the background colour
+  ctx.translate(markCx, markCy);
+  ctx.rotate((38 * Math.PI) / 180);
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(-7, -markR - 8, 14, markR * 2 + 16);
+  ctx.rotate((-38 * Math.PI) / 180);
+  ctx.beginPath();
+  ctx.arc(0, 0, 11, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.font = '700 88px "Space Grotesk", sans-serif';
+  const wordX = markCx + markR + 28;
+  const grad = ctx.createLinearGradient(wordX, 0, wordX + 400, 0);
+  grad.addColorStop(0, "#3A7BC8");
+  grad.addColorStop(0.5, "#2F9E77");
+  grad.addColorStop(1, "#6FB52C");
+  ctx.fillStyle = grad;
+  ctx.fillText("ontrack", wordX, H - 220);
   ctx.fillStyle = "#D9FF3D";
-  ctx.fillRect(96, H - 110, 300, 16);
+  ctx.fillRect(wordX, H - 110, 300, 16);
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Export failed"))), "image/png");

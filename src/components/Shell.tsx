@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useIsDesktop } from "@/lib/useMediaQuery";
 import { ChatWidget } from "./chat/ChatWidget";
+import { Logo } from "./Logo";
 
 const TABS = [
   { href: "/browse", label: "Browse", icon: BrowseIcon },
@@ -37,8 +38,8 @@ function DesktopHeader() {
   return (
     <header className="hidden lg:block sticky top-0 z-40 bg-paper/95 backdrop-blur-sm border-b border-line">
       <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center gap-8">
-        <Link href="/" className="font-display font-bold text-2xl tracking-tight lowercase">
-          ontrack
+        <Link href="/" aria-label="onTrack home">
+          <Logo markClass="h-6 w-6" textClass="text-2xl" />
         </Link>
         <nav className="flex items-center gap-6 text-[14px] font-medium" aria-label="Main">
           {TABS.map((t) => (
@@ -120,8 +121,8 @@ function Footer() {
     <footer className="bg-ink text-paper mt-16">
       <div className="max-w-[1200px] mx-auto px-6 py-16 grid gap-10 md:grid-cols-3">
         <div>
-          <p className="font-display font-bold text-2xl lowercase">ontrack</p>
-          <p className="mt-1 font-display font-semibold text-[15px] text-signal">
+          <Logo light markClass="h-6 w-6" textClass="text-2xl" />
+          <p className="mt-2 font-display font-semibold text-[15px] text-signal">
             Find it. Fit it. Never miss it.
           </p>
           <p className="mt-3 text-[14px] text-paper/70 measure">
