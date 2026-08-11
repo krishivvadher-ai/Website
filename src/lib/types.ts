@@ -45,7 +45,8 @@ export interface Filters {
   intent: Intent | "anything";
   categories: string[];
   price: PriceBucket[];
-  distanceMiles: number;
+  /** null = whole UK (the default); a number narrows to that radius */
+  distanceMiles: number | null;
   dateRange: DateRange;
   stillOpen: boolean;
   query: string;
@@ -55,7 +56,7 @@ export const DEFAULT_FILTERS: Filters = {
   intent: "anything",
   categories: [],
   price: [],
-  distanceMiles: 25,
+  distanceMiles: null,
   dateRange: "any",
   stillOpen: false,
   query: "",

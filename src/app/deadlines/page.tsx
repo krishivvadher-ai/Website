@@ -7,6 +7,7 @@ import { useApp } from "@/lib/store";
 import { visibleToProfile } from "@/lib/age";
 import type { OnTrackEvent, ReminderPrefs } from "@/lib/types";
 import { daysUntil, deadlinePassed, formatDate, formatDateLong } from "@/lib/format";
+import { DeadlineCalendar } from "@/components/DeadlineCalendar";
 
 const DEFAULT_REMINDERS: ReminderPrefs = {
   sevenDays: false,
@@ -36,6 +37,12 @@ export default function DeadlinesPage() {
         Application deadlines from your saved events, soonest first. The deadline is often weeks
         before the event — this tab exists so you find out in time.
       </p>
+
+      {ready && (
+        <div className="mt-8">
+          <DeadlineCalendar savedEvents={savedEvents} />
+        </div>
+      )}
 
       {!ready ? null : withDeadline.length === 0 ? (
         <div className="card mt-8 p-8 text-center">

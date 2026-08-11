@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Ticker } from "@/components/Ticker";
 import { LandingFeed } from "@/components/LandingFeed";
+import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { CATEGORIES } from "@/lib/categories";
 
 // Landing page: editorial and typographic — a poster wall, not a SaaS
@@ -9,33 +10,7 @@ import { CATEGORIES } from "@/lib/categories";
 export default function LandingPage() {
   return (
     <>
-      <section className="max-w-[1200px] mx-auto px-6 pt-16 pb-16 lg:pt-24 lg:pb-24">
-        <p className="pill inline-block border border-ink px-3 py-1">
-          Hertfordshire &amp; the London commuter belt
-        </p>
-        <h1 className="mt-6 text-[36px] lg:text-[56px] max-w-[16ch]">
-          Find things worth your time.
-        </h1>
-        <p className="mt-5 text-[18px] lg:text-[20px] text-grey measure">
-          Gigs and insight days. Open decks and open lectures. One place to find what’s on near
-          you, filtered to what you can actually attend — and it tells you before applications
-          close, not after.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link
-            href="/browse"
-            className="inline-flex items-center min-h-[48px] px-7 rounded-full bg-signal text-ink border border-ink font-display font-semibold text-[16px]"
-          >
-            See what’s on
-          </Link>
-          <Link
-            href="/map"
-            className="inline-flex items-center min-h-[48px] px-7 rounded-full border border-ink text-ink font-display font-semibold text-[16px] hover:bg-ink hover:text-paper transition-colors"
-          >
-            Open the map
-          </Link>
-        </div>
-      </section>
+      <HeroSlideshow />
 
       <Ticker />
 

@@ -1,8 +1,8 @@
 # onTrack
 
-One place to find and track things worth doing — for 13–25 year olds in
-Hertfordshire and the London commuter belt. Split evenly between things that
-are fun and things that get you somewhere, with plenty that are both.
+One place to find and track things worth doing — for 13–25 year olds across
+the UK. Split evenly between things that are fun and things that get you
+somewhere, with plenty that are both.
 
 ## Run it
 

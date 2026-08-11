@@ -110,18 +110,22 @@ export function FilterControls({
           Distance
         </h3>
         <label className="block text-[13px] text-grey mb-1" htmlFor="distance-slider">
-          Within {filters.distanceMiles} miles
+          {filters.distanceMiles === null ? "Whole UK" : `Within ${filters.distanceMiles} miles`}
         </label>
         <input
           id="distance-slider"
           type="range"
           min={1}
-          max={25}
+          max={26}
           step={1}
-          value={filters.distanceMiles}
-          onChange={(e) => onChange({ ...filters, distanceMiles: Number(e.target.value) })}
+          value={filters.distanceMiles ?? 26}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            onChange({ ...filters, distanceMiles: v >= 26 ? null : v });
+          }}
           className="w-full accent-[#111111]"
         />
+        <p className="mt-1 text-[12px] text-grey">Slide all the way right for the whole UK.</p>
       </section>
 
       <section aria-labelledby="filter-date">
@@ -182,7 +186,7 @@ export function MobileChipRow({
     filters.price.length +
     (filters.dateRange !== "any" ? 1 : 0) +
     (filters.stillOpen ? 1 : 0) +
-    (filters.distanceMiles !== 25 ? 1 : 0);
+    (filters.distanceMiles !== null ? 1 : 0);
 
   return (
     <div className="flex gap-2 overflow-x-auto pb-1 -mx-6 px-6 [scrollbar-width:none]">

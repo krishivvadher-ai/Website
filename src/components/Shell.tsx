@@ -121,9 +121,11 @@ function Footer() {
       <div className="max-w-[1200px] mx-auto px-6 py-16 grid gap-10 md:grid-cols-3">
         <div>
           <p className="font-display font-bold text-2xl lowercase">ontrack</p>
+          <p className="mt-1 font-display font-semibold text-[15px] text-signal">
+            Find it. Fit it. Never miss it.
+          </p>
           <p className="mt-3 text-[14px] text-paper/70 measure">
-            One place to find and track things worth doing — Hertfordshire and the London commuter
-            belt.
+            One place to find and track things worth doing, across the UK.
           </p>
         </div>
         <nav className="text-[14px] grid gap-2" aria-label="Footer">

@@ -4,8 +4,9 @@ import React, { useMemo, useState } from "react";
 import { EVENTS } from "@/lib/events";
 import { CATEGORIES, categoryBySlug } from "@/lib/categories";
 import { useApp } from "@/lib/store";
-import { formatDate, formatPrice } from "@/lib/format";
+import { formatDate, formatPrice, deadlineFlag, daysUntil } from "@/lib/format";
 import { eventAgeBadge } from "@/lib/age";
+import { hashString } from "@/components/CardImage";
 
 interface Draft {
   title: string;
@@ -17,10 +18,6 @@ interface Draft {
   needsDeadline: boolean;
   warnings: string[];
 }
-
-const AI_MARKER = (
-  <span className="pill bg-signal text-ink px-2.5 py-1 border border-ink">AI-generated — please check</span>
-);
 
 export default function OrganiserPage() {
   const { ready, organiserSignedIn, setOrganiserSignedIn } = useApp();
@@ -56,6 +53,13 @@ export default function OrganiserPage() {
   return <Dashboard onSignOut={() => setOrganiserSignedIn(false)} />;
 }
 
+// The demo organiser "owns" a slice of the seed listings
+const MY_EVENTS = EVENTS.slice(0, 6);
+
+function fakeMetric(slug: string, salt: string, min: number, max: number): number {
+  return min + (hashString(`${slug}-${salt}`) % (max - min));
+}
+
 function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-8">
@@ -65,6 +69,9 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           Sign out
         </button>
       </div>
+
+      <StatsRow />
+      <ListingsTable />
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <ListingAssistant />
@@ -79,6 +86,85 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         <PerformanceSummary />
       </div>
     </div>
+  );
+}
+
+function StatsRow() {
+  const stats = useMemo(() => {
+    const views = MY_EVENTS.reduce((s, e) => s + fakeMetric(e.slug, "views", 220, 1400), 0);
+    const saves = MY_EVENTS.reduce((s, e) => s + fakeMetric(e.slug, "saves", 18, 160), 0);
+    const shares = MY_EVENTS.reduce((s, e) => s + fakeMetric(e.slug, "shares", 6, 70), 0);
+    return [
+      { label: "Live listings", value: String(MY_EVENTS.length), note: "all approved" },
+      { label: "Views, 30 days", value: views.toLocaleString("en-GB"), note: "60% from shared links" },
+      { label: "Saves", value: saves.toLocaleString("en-GB"), note: `${Math.round((saves / views) * 100)}% of views` },
+      { label: "Shares", value: shares.toLocaleString("en-GB"), note: "mostly one-to-one" },
+    ];
+  }, []);
+
+  return (
+    <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {stats.map((s) => (
+        <div key={s.label} className="card p-5">
+          <p className="text-[12px] uppercase tracking-[0.04em] text-grey">{s.label}</p>
+          <p className="mt-1 font-display font-bold text-[28px] leading-none">{s.value}</p>
+          <p className="mt-1 text-[12px] text-grey">{s.note}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ListingsTable() {
+  return (
+    <section className="card mt-6 p-6 overflow-hidden" aria-labelledby="listings-heading">
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="listings-heading" className="text-[22px]">
+          Live listings
+        </h2>
+        <span className="text-[13px] text-grey">Publishing and editing are disabled in this demo</span>
+      </div>
+      <div className="mt-4 overflow-x-auto -mx-6 px-6">
+        <table className="w-full text-[14px] min-w-[720px]">
+          <thead>
+            <tr className="text-left text-grey border-b border-line text-[12px] uppercase tracking-[0.04em]">
+              <th className="py-2 pr-4 font-medium">Event</th>
+              <th className="py-2 pr-4 font-medium">Date</th>
+              <th className="py-2 pr-4 font-medium">Age</th>
+              <th className="py-2 pr-4 font-medium">Price</th>
+              <th className="py-2 pr-4 font-medium">Views</th>
+              <th className="py-2 pr-4 font-medium">Saves</th>
+              <th className="py-2 font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {MY_EVENTS.map((e) => {
+              const flag = deadlineFlag(e.applicationDeadline);
+              return (
+                <tr key={e.id} className="border-b border-line last:border-0 align-top">
+                  <td className="py-3 pr-4">
+                    <p className="font-medium leading-tight">{e.title}</p>
+                    {flag && <p className="mt-0.5 text-[12px] text-coral font-medium">{flag}</p>}
+                  </td>
+                  <td className="py-3 pr-4 whitespace-nowrap">{formatDate(e.date)}</td>
+                  <td className="py-3 pr-4">
+                    <span className="pill bg-ink text-paper px-2 py-0.5">{eventAgeBadge(e)}</span>
+                  </td>
+                  <td className="py-3 pr-4">{formatPrice(e.price)}</td>
+                  <td className="py-3 pr-4">{fakeMetric(e.slug, "views", 220, 1400).toLocaleString("en-GB")}</td>
+                  <td className="py-3 pr-4">{fakeMetric(e.slug, "saves", 18, 160)}</td>
+                  <td className="py-3">
+                    <span className={`pill px-2.5 py-0.5 ${daysUntil(e.date) >= 0 ? "bg-signal text-ink" : "bg-line text-grey"}`}>
+                      {daysUntil(e.date) >= 0 ? "Live" : "Past"}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -155,7 +241,7 @@ function ListingAssistant() {
           {draft && (
             <div className="mt-5 border-t border-line pt-5">
               <div className="flex items-center gap-3 flex-wrap">
-                {AI_MARKER}
+                <span className="pill bg-line text-ink px-2.5 py-1">Draft — review before publishing</span>
                 {previous && (
                   <button
                     type="button"
@@ -371,7 +457,7 @@ function BalanceMonitor() {
       <p className={`mt-3 text-[14px] font-medium ${flagged ? "text-coral" : ""}`}>
         {flagged
           ? "⚠ The mix has drifted — one side is under 35% of the local feed."
-          : "Herts & commuter belt: the mix is healthy."}
+          : "Across the UK: the mix is healthy."}
       </p>
     </section>
   );
@@ -421,12 +507,9 @@ function EligibilityChecker() {
 
   return (
     <section className="card p-6" aria-labelledby="eligibility-heading">
-      <div className="flex items-center gap-3 flex-wrap">
-        <h2 id="eligibility-heading" className="text-[22px]">
-          Eligibility checker
-        </h2>
-        {AI_MARKER}
-      </div>
+      <h2 id="eligibility-heading" className="text-[22px]">
+        Eligibility checker
+      </h2>
       <p className="mt-1 text-[13px] text-grey measure">
         Scans your live listings for age bands that contradict their descriptions.
       </p>
@@ -464,12 +547,9 @@ function PricingGuidance() {
 
   return (
     <section className="card p-6" aria-labelledby="pricing-heading">
-      <div className="flex items-center gap-3 flex-wrap">
-        <h2 id="pricing-heading" className="text-[22px]">
-          Pricing guidance
-        </h2>
-        {AI_MARKER}
-      </div>
+      <h2 id="pricing-heading" className="text-[22px]">
+        Pricing guidance
+      </h2>
       <p className="mt-1 text-[13px] text-grey measure">
         Similar events by category in your area. Most of this audience spends nothing — where the
         data supports free or low-cost, go free: attendance follows.
@@ -515,12 +595,9 @@ function PerformanceSummary() {
 
   return (
     <section className="card p-6" aria-labelledby="performance-heading">
-      <div className="flex items-center gap-3 flex-wrap">
-        <h2 id="performance-heading" className="text-[22px]">
-          Performance & timing
-        </h2>
-        {AI_MARKER}
-      </div>
+      <h2 id="performance-heading" className="text-[22px]">
+        Performance &amp; timing
+      </h2>
       <div className="mt-4 space-y-4 text-[14px] measure">
         <div>
           <h3 className="text-[15px] font-semibold">Last 30 days, in plain English</h3>

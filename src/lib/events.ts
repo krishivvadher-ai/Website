@@ -1,8 +1,7 @@
 import type { OnTrackEvent } from "./types";
 
-// Seed listings for the launch area: Hertfordshire and the London commuter
-// belt. Dates are offsets from "now" so the demo feed always has upcoming
-// events and live application deadlines.
+// Seed listings across the UK. Dates are offsets from "now" so the demo
+// feed always has upcoming events and live application deadlines.
 //
 // Balance rule (section 3 of the product brief): leisure and opportunity are
 // equal citizens. This set is roughly half fun, half useful, with a good
@@ -448,6 +447,121 @@ const seeds: Seed[] = [
     journeyMins: 35,
     organiser: "Repair Café Herts",
     tags: ["repair", "skills", "environment"],
+  },
+  {
+    slug: "manchester-warehouse-gig",
+    title: "Warehouse Project warm-up: four DJs, one room",
+    category: "music",
+    intent: "fun",
+    description:
+      "A warm-up night in a converted Ancoats warehouse — four local DJs, a proper sound system, and tickets kept cheap on purpose. The lineup rotates monthly and past warm-ups have booked names a year before they blew up. 18+, bring ID.",
+    venue: { name: "Hidden", area: "Manchester", lat: 53.4894, lng: -2.2275 },
+    daysAway: 9,
+    hour: 22,
+    minAge: 18,
+    price: 900,
+    feeBreakdown: "£8 ticket + £1 booking fee",
+    organiser: "Hidden MCR",
+    tags: ["dj", "club", "manchester"],
+  },
+  {
+    slug: "nec-apprenticeship-expo",
+    title: "National Apprenticeship Expo — 120 employers",
+    category: "careers",
+    intent: "useful",
+    description:
+      "The biggest apprenticeship fair in the country: 120 employers from engineering to law, CV clinics that actually rewrite your CV with you, and current apprentices on every stand answering the questions the brochures don't. Free with registration; travel bursaries available if cost is a barrier.",
+    venue: { name: "NEC Birmingham", area: "Birmingham", lat: 52.453, lng: -1.718 },
+    daysAway: 22,
+    hour: 9,
+    deadlineDaysAway: 15,
+    minAge: 15,
+    maxAge: 21,
+    price: 0,
+    organiser: "National Apprenticeship Service",
+    tags: ["apprenticeship", "fair", "cv"],
+  },
+  {
+    slug: "bristol-kayak-taster",
+    title: "Harbourside kayak taster — everything provided",
+    category: "sport",
+    intent: "both",
+    description:
+      "Ninety minutes on Bristol's floating harbour in a stable sit-on-top kayak, with all kit provided and instructors in the water with you. No swimming ability needed beyond being happy to get splashed. You'll paddle past the SS Great Britain and under Pero's Bridge — a genuinely good way to see the city.",
+    venue: { name: "Bristol Harbourside", area: "Bristol", lat: 51.4477, lng: -2.5996 },
+    daysAway: 8,
+    hour: 14,
+    minAge: 13,
+    price: 600,
+    feeBreakdown: "£6 including all kit hire",
+    organiser: "All-Aboard Watersports",
+    tags: ["kayak", "water", "outdoors"],
+  },
+  {
+    slug: "leeds-game-jam",
+    title: "48-hour game jam — teams formed on the day",
+    category: "workshops",
+    intent: "both",
+    description:
+      "Build a game in a weekend. Teams form on Friday night around whoever shows up — artists, coders, musicians and people who've never made anything all get slotted in. Mentors float between teams, food is provided, and everything ships by Sunday 6pm, playable at the closing arcade. A finished jam game is a real portfolio piece.",
+    venue: { name: "Leeds Beckett University", area: "Leeds", lat: 53.8046, lng: -1.5484 },
+    daysAway: 16,
+    hour: 18,
+    deadlineDaysAway: 11,
+    minAge: 16,
+    maxAge: 25,
+    price: 0,
+    organiser: "Leeds Digital",
+    tags: ["gamedev", "coding", "weekend"],
+  },
+  {
+    slug: "cardiff-comedy-open-mic",
+    title: "Comedy open mic: your first five minutes",
+    category: "music",
+    intent: "fun",
+    description:
+      "A beginner-friendly comedy open mic where half the room is doing stand-up for the first time and the crowd is contractually kind. Five-minute slots, sign up online or on the door, and the host workshops your set with you beforehand if you want. Watching is free; performing costs nothing but nerve.",
+    venue: { name: "The Glee Club", area: "Cardiff", lat: 51.4645, lng: -3.1633 },
+    daysAway: 12,
+    hour: 19,
+    minAge: 16,
+    price: 0,
+    organiser: "Glee Comedy Lab",
+    tags: ["comedy", "open-mic", "performance"],
+  },
+  {
+    slug: "newcastle-uni-taster",
+    title: "Newcastle University taster: computing and AI",
+    category: "talks",
+    intent: "useful",
+    description:
+      "A half-day taster at Newcastle's school of computing — a hands-on machine learning lab, a lecture on what AI courses actually teach, and a Q&A with current students about accommodation, money and whether the maths is survivable. Free, aimed at Years 12–13, and the application is one short form.",
+    venue: { name: "Newcastle University", area: "Newcastle", lat: 54.9799, lng: -1.6147 },
+    daysAway: 25,
+    hour: 10,
+    deadlineDaysAway: 18,
+    minAge: 16,
+    maxAge: 18,
+    price: 0,
+    organiser: "Newcastle University Outreach",
+    tags: ["computing", "ai", "university"],
+  },
+  {
+    slug: "nottingham-festival-crew",
+    title: "Festival volunteer crew — free entry all weekend",
+    category: "volunteering",
+    intent: "both",
+    description:
+      "Crew Nottingham's biggest free festival: two four-hour shifts across the weekend on gates, wayfinding or the green team, and the rest of the time the festival is yours — full lineup, crew catering, backstage showers. Training on the Friday. Counts for DofE and looks great anywhere.",
+    venue: { name: "Wollaton Park", area: "Nottingham", lat: 52.948, lng: -1.2093 },
+    daysAway: 20,
+    hour: 9,
+    deadlineDaysAway: 9,
+    minAge: 16,
+    maxAge: 25,
+    price: 0,
+    organiser: "Notts Events Trust",
+    tags: ["festival", "volunteering", "music"],
   },
   {
     slug: "summer-closing-party",

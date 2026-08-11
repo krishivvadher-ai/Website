@@ -42,6 +42,11 @@ interface Cluster {
   y: number;
   events: OnTrackEvent[];
 }
+interface Centre {
+  lat: number;
+  lng: number;
+  label: string;
+}
 
 /** Circle polygon for the distance radius, drawn live with the slider. */
 function circleGeoJSON(lat: number, lng: number, miles: number): GeoJSON.Feature<GeoJSON.Polygon> {
@@ -56,20 +61,68 @@ function circleGeoJSON(lat: number, lng: number, miles: number): GeoJSON.Feature
   return { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [coords] } };
 }
 
+function eventsBounds(events: OnTrackEvent[]): maplibregl.LngLatBounds | null {
+  if (events.length === 0) return null;
+  const b = new maplibregl.LngLatBounds();
+  for (const e of events) b.extend([e.venue.lng, e.venue.lat]);
+  return b;
+}
+
 export function MapClient() {
-  const { profile } = useApp();
   const isDesktop = useIsDesktop();
+  // Shared state lives here so it survives the desktop↔mobile remount
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const [centre, setCentre] = useState(DEFAULT_LOCATION);
+  const [centre, setCentre] = useState<Centre>(DEFAULT_LOCATION);
+
+  // The map must not initialise until we know which layout it lives in —
+  // initialising into one container and re-parenting breaks the canvas.
+  if (isDesktop === null) {
+    return (
+      <div className="h-[calc(100dvh-4rem)] p-6">
+        <div className="skeleton w-full h-full !rounded-2xl" />
+      </div>
+    );
+  }
+
+  return (
+    <MapView
+      key={isDesktop ? "desktop" : "mobile"}
+      isDesktop={isDesktop}
+      filters={filters}
+      setFilters={setFilters}
+      centre={centre}
+      setCentre={setCentre}
+    />
+  );
+}
+
+function MapView({
+  isDesktop,
+  filters,
+  setFilters,
+  centre,
+  setCentre,
+}: {
+  isDesktop: boolean;
+  filters: Filters;
+  setFilters: (f: Filters) => void;
+  centre: Centre;
+  setCentre: (c: Centre) => void;
+}) {
+  const { profile } = useApp();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [showSearchArea, setShowSearchArea] = useState(false);
   const [locNote, setLocNote] = useState(false);
+  const [mapInit, setMapInit] = useState(false); // map object exists — pins can project
+  const [mapReady, setMapReady] = useState(false); // style loaded — layers can be added
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const [, forceRender] = useState(0);
+  const centreRef = useRef(centre);
+  centreRef.current = centre;
+  const [viewStamp, setViewStamp] = useState(0);
 
   const { events } = useMemo(
     () => applyFilters(EVENTS, filters, profile, centre),
@@ -78,21 +131,29 @@ export function MapClient() {
 
   // --- map lifecycle -------------------------------------------------------
   useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return;
+    const container = mapContainer.current;
+    if (!container) return;
     const map = new maplibregl.Map({
-      container: mapContainer.current,
+      container,
       style: MAP_STYLE,
       center: [DEFAULT_LOCATION.lng, DEFAULT_LOCATION.lat],
-      zoom: 10,
+      zoom: 9,
       attributionControl: { compact: true },
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     mapRef.current = map;
 
-    const rerender = () => forceRender((n) => n + 1);
+    const rerender = () => setViewStamp((n) => n + 1);
     map.on("move", rerender);
+
+    // Fit the whole UK immediately — pins must not wait for tiles, which can
+    // be slow or blocked without breaking the rest of the map
+    const bounds = eventsBounds(EVENTS);
+    if (bounds) map.fitBounds(bounds, { padding: 60, maxZoom: 10, duration: 0 });
+    setMapInit(true);
+
     map.on("load", () => {
-      map.addSource("radius", { type: "geojson", data: circleGeoJSON(centre.lat, centre.lng, filters.distanceMiles) });
+      map.addSource("radius", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
         id: "radius-fill",
         type: "fill",
@@ -105,47 +166,52 @@ export function MapClient() {
         source: "radius",
         paint: { "line-color": "#111111", "line-opacity": 0.35, "line-width": 1.5, "line-dasharray": [2, 2] },
       });
+      setMapReady(true);
       rerender();
     });
     map.on("moveend", () => {
       const c = map.getCenter();
-      const moved = distanceMiles(c.lat, c.lng, centre.lat, centre.lng);
-      setShowSearchArea(moved > 2);
+      const b = map.getBounds();
+      // "Search this area" appears once the user has panned meaningfully
+      // relative to what's on screen, at any zoom level
+      const viewSpan = distanceMiles(b.getNorth(), b.getWest(), b.getNorth(), b.getEast());
+      const moved = distanceMiles(c.lat, c.lng, centreRef.current.lat, centreRef.current.lng);
+      setShowSearchArea(moved > Math.max(2, viewSpan * 0.2));
     });
+
+    // Keep the canvas matched to its container — split panes and mobile
+    // browser chrome both resize it after init
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(container);
+
     return () => {
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Radius circle follows the slider and the search centre
+  // Radius circle follows the slider and the search centre (only when a
+  // radius is actually set — the default is the whole UK)
   useEffect(() => {
     const map = mapRef.current;
-    const src = map?.getSource("radius") as maplibregl.GeoJSONSource | undefined;
-    src?.setData(circleGeoJSON(centre.lat, centre.lng, filters.distanceMiles));
-  }, [centre, filters.distanceMiles]);
+    if (!map || !mapReady) return;
+    const src = map.getSource("radius") as maplibregl.GeoJSONSource | undefined;
+    if (!src) return;
+    if (filters.distanceMiles === null) {
+      src.setData({ type: "FeatureCollection", features: [] });
+    } else {
+      src.setData(circleGeoJSON(centre.lat, centre.lng, filters.distanceMiles));
+    }
+  }, [centre, filters.distanceMiles, mapReady]);
 
-  // Track pan distance from the current search centre
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const onMoveEnd = () => {
-      const c = map.getCenter();
-      setShowSearchArea(distanceMiles(c.lat, c.lng, centre.lat, centre.lng) > 2);
-    };
-    map.on("moveend", onMoveEnd);
-    return () => {
-      map.off("moveend", onMoveEnd);
-    };
-  }, [centre]);
-
-  // --- clustering (screen-space, recomputed on every render) ---------------
+  // --- clustering (screen-space, recomputed whenever the view moves) -------
   const { pins, clusters } = useMemo(() => {
+    void viewStamp;
     const map = mapRef.current;
     const pins: PinPoint[] = [];
     const clusters: Cluster[] = [];
-    if (!map) return { pins, clusters };
+    if (!map || !mapInit) return { pins, clusters };
     const CLUSTER_PX = 56;
     const points: PinPoint[] = events.map((event) => {
       const p = map.project([event.venue.lng, event.venue.lat]);
@@ -173,10 +239,7 @@ export function MapClient() {
       }
     }
     return { pins, clusters };
-    // mapRef.current mutates without identity change; the forced render on
-    // "move" keeps this in sync.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [events, forceRender, mapRef.current && mapRef.current.getCenter().toString(), mapRef.current?.getZoom()]);
+  }, [events, mapInit, viewStamp]);
 
   const selectEvent = useCallback(
     (id: string | null, pan = false) => {
@@ -235,7 +298,7 @@ export function MapClient() {
           onClick={() => {
             mapRef.current?.easeTo({
               center: [c.events[0].venue.lng, c.events[0].venue.lat],
-              zoom: (mapRef.current?.getZoom() ?? 10) + 2,
+              zoom: (mapRef.current?.getZoom() ?? 9) + 2,
               duration: 300,
             });
           }}
@@ -316,7 +379,7 @@ export function MapClient() {
   );
 
   const locationControls = (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 flex-wrap">
       <button
         type="button"
         onClick={() => (locNote ? useMyLocation() : setLocNote(true))}
@@ -333,15 +396,20 @@ export function MapClient() {
         </span>
       )}
       <label className="flex items-center gap-2 text-[12px] text-grey bg-white border border-line rounded-full px-3 min-h-[44px]">
-        {filters.distanceMiles} mi
+        {filters.distanceMiles === null ? "Whole UK" : `${filters.distanceMiles} mi`}
         <input
           type="range"
           min={1}
-          max={25}
-          value={filters.distanceMiles}
-          onChange={(e) => setFilters({ ...filters, distanceMiles: Number(e.target.value) })}
+          max={26}
+          value={filters.distanceMiles ?? 26}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            setFilters({ ...filters, distanceMiles: v >= 26 ? null : v });
+          }}
           className="w-24 accent-[#111111]"
-          aria-label={`Distance: ${filters.distanceMiles} miles`}
+          aria-label={
+            filters.distanceMiles === null ? "Distance: whole UK" : `Distance: ${filters.distanceMiles} miles`
+          }
         />
       </label>
     </div>
@@ -356,7 +424,8 @@ export function MapClient() {
           <div className="mt-4">{chipRow}</div>
           <div className="mt-3">{locationControls}</div>
           <p className="text-[13px] text-grey mt-4" role="status">
-            {events.length} event{events.length === 1 ? "" : "s"} within {filters.distanceMiles} miles
+            {events.length} event{events.length === 1 ? "" : "s"}{" "}
+            {filters.distanceMiles === null ? "across the UK" : `within ${filters.distanceMiles} miles`}
           </p>
           <div className="mt-4 grid gap-6 pb-8">
             {events.map((e) => (
@@ -365,7 +434,7 @@ export function MapClient() {
             {events.length === 0 && (
               <div className="card p-8 text-center">
                 <h2 className="text-[20px]">No events match</h2>
-                <p className="mt-2 text-grey text-[14px]">Try 25 miles, or clear a filter.</p>
+                <p className="mt-2 text-grey text-[14px]">Try the whole UK, or clear a filter.</p>
               </div>
             )}
           </div>
@@ -461,7 +530,7 @@ export function MapClient() {
           </div>
         ))}
         {events.length === 0 && (
-          <div className="card p-4 bg-white text-[14px]">No events match — try widening the distance.</div>
+          <div className="card p-4 bg-white text-[14px]">No events match — try the whole UK.</div>
         )}
       </div>
     </div>

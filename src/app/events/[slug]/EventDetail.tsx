@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import type { OnTrackEvent } from "@/lib/types";
 import { categoryBySlug } from "@/lib/categories";
 import { formatDateLong, formatPrice, formatTime, deadlineFlag, deadlinePassed, formatDate } from "@/lib/format";
@@ -12,6 +13,11 @@ import { useIsDesktop } from "@/lib/useMediaQuery";
 import { CardImage } from "@/components/CardImage";
 import { AgeBadge, PriceTag } from "@/components/badges";
 import { ShareActions } from "@/components/ShareActions";
+
+const VenueMap = dynamic(() => import("@/components/VenueMap").then((m) => m.VenueMap), {
+  ssr: false,
+  loading: () => <div className="skeleton mt-3 h-[280px] !rounded-2xl" />,
+});
 
 export function EventDetail({ event }: { event: OnTrackEvent }) {
   const { isSaved, toggleSaved } = useApp();
@@ -117,6 +123,12 @@ export function EventDetail({ event }: { event: OnTrackEvent }) {
 
         <h2 className="mt-10 text-[22px]">About</h2>
         <p className="mt-3 text-[16px] leading-relaxed measure whitespace-pre-line">{event.description}</p>
+
+        <h2 className="mt-10 text-[22px]">Where you’re going</h2>
+        <p className="mt-2 text-[15px] text-grey">
+          {event.venue.name}, {event.venue.area}
+        </p>
+        <VenueMap event={event} />
 
         <h2 className="mt-10 text-[22px]">Run by</h2>
         <p className="mt-2 text-[15px] text-grey">{event.organiser}</p>

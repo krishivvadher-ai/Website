@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: "%s · onTrack",
   },
   description:
-    "One place to find and track things worth doing near you — gigs, insight days, workshops, socials and more, filtered to what you can actually attend.",
+    "Find it. Fit it. Never miss it. One place to find and track things worth doing near you — gigs, insight days, workshops, socials and more, filtered to what you can actually attend.",
   openGraph: {
     siteName: "onTrack",
     type: "website",
