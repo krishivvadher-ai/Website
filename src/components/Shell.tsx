@@ -142,6 +142,9 @@ function Footer() {
           <Link href="/organiser" className="hover:underline">
             List an event
           </Link>
+          <Link href="/contact" className="hover:underline">
+            Contact us
+          </Link>
         </nav>
         <div className="text-[14px] text-paper/70">
           <p>Free for everyone under 25. No paywall, no ads in your feed.</p>

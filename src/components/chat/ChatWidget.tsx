@@ -61,7 +61,7 @@ export function ChatWidget() {
         const next = [...m];
         next[next.length - 1] = {
           role: "assistant",
-          text: "Something went wrong on our side. Try again, or email the team at hello@ontrack.example.",
+          text: "Something went wrong on our side. Try again, or email the team at onTrack@gmail.com.",
         };
         return next;
       });
@@ -108,7 +108,7 @@ export function ChatWidget() {
             <div className="flex items-center gap-2">
               {/* Always visible, not revealed after failure */}
               <a
-                href="mailto:hello@ontrack.example"
+                href="/contact"
                 className="pill bg-paper text-ink px-3 py-1.5 whitespace-nowrap"
               >
                 Talk to a person
