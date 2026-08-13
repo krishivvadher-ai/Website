@@ -107,6 +107,9 @@ export interface Profile {
   band?: [number, number];
   /** "Also show events I'm not old enough for" — off by default, lives in settings */
   showIneligible: boolean;
+  /** student-controlled: share my activity record with my school — off by
+      default, revocable any time, never includes concern reports */
+  shareWithSchool?: boolean;
 }
 
 export interface ReminderPrefs {

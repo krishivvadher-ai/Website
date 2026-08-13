@@ -1,5 +1,39 @@
 # Changelog
 
+## pitch-prep (round 3) — 13 August 2026
+
+### Student visibility for schools — the consent model
+- Schools can now see individual students' events and records, via
+  student-controlled sharing: a "Share my record with my school" setting on
+  /you (off by default, revocable instantly, explained in plain language).
+  The school dashboard's Students tab shows a searchable roster — sharing
+  students in full (saved, booked, attended + their own notes, CSV export),
+  non-sharing students by name only. Safeguarding concern reports are never
+  visible to schools under any setting, and both sides say so. Privacy
+  notice updated with the new row and the consent exception.
+- **⚠ review**: this is a deliberate softening of the previous
+  "aggregate-only, never individual" position, chosen as consent-based to
+  stay Children's Code-defensible. The pitch deck's compliance slide should
+  mention the consent model before this is shown to a diligence process.
+
+### Borough dashboard (the £6,000/year product)
+- /boroughs/dashboard behind demo council sign-in, five tabs: Overview
+  (reach, weekly-active trend chart, ward-by-ward activity, headline
+  stats), Youth activity (day×time heatmap, age bands, categories,
+  discovery→attendance funnel), Provision gaps (demand-vs-supply paired
+  bars per category, cold-spot wards, deadline coverage), Organisers
+  (verification split, reach leaderboard), Impact report (printable
+  members'-briefing narrative, milestones vs targets). All aggregate,
+  all deterministic demo data. Linked from the public borough page.
+
+### School dashboard rebuilt
+- Now five tabs (Overview / Students / Staff picks / Deadlines / Reports)
+  with a 12-week activity trend, consent-share rate, per-event "students
+  interested" counts on the deadline digest, destinations snapshot and an
+  activity heatmap.
+- New shared chart primitives (trend, heatmap, paired bars, stat cards) in
+  src/components/charts.tsx — no chart library, palette-native.
+
 ## pitch-prep (round 2) — 13 August 2026
 
 ### Demo bookings

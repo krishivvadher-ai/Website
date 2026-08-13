@@ -39,6 +39,8 @@ interface AppState {
   setOrganiserSignedIn: (v: boolean) => void;
   schoolSignedIn: boolean;
   setSchoolSignedIn: (v: boolean) => void;
+  boroughSignedIn: boolean;
+  setBoroughSignedIn: (v: boolean) => void;
   /** events a school staff member has featured for their students */
   schoolPicks: string[];
   toggleSchoolPick: (eventId: string) => void;
@@ -64,6 +66,7 @@ interface Persisted {
   pendingListings: PendingListing[];
   organiserSignedIn: boolean;
   schoolSignedIn: boolean;
+  boroughSignedIn: boolean;
   schoolPicks: string[];
 }
 
@@ -78,6 +81,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [pendingListings, setPendingListings] = useState<PendingListing[]>([]);
   const [organiserSignedIn, setOrganiserSignedIn] = useState(false);
   const [schoolSignedIn, setSchoolSignedIn] = useState(false);
+  const [boroughSignedIn, setBoroughSignedIn] = useState(false);
   const [schoolPicks, setSchoolPicks] = useState<string[]>([]);
 
   useEffect(() => {
@@ -94,6 +98,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (Array.isArray(data.pendingListings)) setPendingListings(data.pendingListings);
         if (data.organiserSignedIn) setOrganiserSignedIn(true);
         if (data.schoolSignedIn) setSchoolSignedIn(true);
+        if (data.boroughSignedIn) setBoroughSignedIn(true);
         if (Array.isArray(data.schoolPicks)) setSchoolPicks(data.schoolPicks);
       }
     } catch {
@@ -104,13 +109,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!ready) return;
-    const data: Persisted = { profile, saved, reminders, attended, bookings, reports, pendingListings, organiserSignedIn, schoolSignedIn, schoolPicks };
+    const data: Persisted = { profile, saved, reminders, attended, bookings, reports, pendingListings, organiserSignedIn, schoolSignedIn, boroughSignedIn, schoolPicks };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
       // storage full or unavailable — the app still works, it just forgets
     }
-  }, [ready, profile, saved, reminders, attended, bookings, reports, pendingListings, organiserSignedIn, schoolSignedIn, schoolPicks]);
+  }, [ready, profile, saved, reminders, attended, bookings, reports, pendingListings, organiserSignedIn, schoolSignedIn, boroughSignedIn, schoolPicks]);
 
   const setProfile = useCallback((p: Profile) => setProfileState(p), []);
   const toggleSaved = useCallback((id: string) => {
@@ -177,9 +182,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const exportData = useCallback(() => {
-    const data: Persisted = { profile, saved, reminders, attended, bookings, reports, pendingListings, organiserSignedIn, schoolSignedIn, schoolPicks };
+    const data: Persisted = { profile, saved, reminders, attended, bookings, reports, pendingListings, organiserSignedIn, schoolSignedIn, boroughSignedIn, schoolPicks };
     return JSON.stringify(data, null, 2);
-  }, [profile, saved, reminders, attended, bookings, reports, pendingListings, organiserSignedIn, schoolSignedIn, schoolPicks]);
+  }, [profile, saved, reminders, attended, bookings, reports, pendingListings, organiserSignedIn, schoolSignedIn, boroughSignedIn, schoolPicks]);
 
   const toggleSchoolPick = useCallback((id: string) => {
     setSchoolPicks((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -195,6 +200,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPendingListings([]);
     setOrganiserSignedIn(false);
     setSchoolSignedIn(false);
+    setBoroughSignedIn(false);
     setSchoolPicks([]);
     try {
       // Clear everything onTrack has ever put on this device, including the
@@ -230,6 +236,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setOrganiserSignedIn,
       schoolSignedIn,
       setSchoolSignedIn,
+      boroughSignedIn,
+      setBoroughSignedIn,
       schoolPicks,
       toggleSchoolPick,
       exportData,
@@ -255,6 +263,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addPendingListing,
       organiserSignedIn,
       schoolSignedIn,
+      boroughSignedIn,
       schoolPicks,
       toggleSchoolPick,
       exportData,

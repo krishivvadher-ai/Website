@@ -100,6 +100,10 @@ export default function ForOrganisersPage() {
         <Link href="/boroughs/tower-hamlets" className="underline">
           see a live borough page
         </Link>
+        , the{" "}
+        <Link href="/boroughs/dashboard" className="underline">
+          council dashboard
+        </Link>
         , try the{" "}
         <Link href="/schools/dashboard" className="underline">
           school staff dashboard

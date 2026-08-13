@@ -97,12 +97,20 @@ export default async function BoroughPage({ params }: { params: Promise<{ slug: 
             reporting, and priority review for your youth service’s listings — £6,000 a year.
           </p>
         </div>
-        <Link
-          href="/contact"
-          className="mt-5 md:mt-0 inline-flex shrink-0 items-center min-h-[48px] px-7 rounded-full bg-signal text-ink font-display font-semibold"
-        >
-          Talk to us
-        </Link>
+        <div className="mt-5 md:mt-0 flex shrink-0 flex-wrap gap-3">
+          <Link
+            href="/boroughs/dashboard"
+            className="inline-flex items-center min-h-[48px] px-7 rounded-full border border-paper text-paper font-display font-semibold hover:bg-paper hover:text-ink transition-colors"
+          >
+            Try the council dashboard
+          </Link>
+          <Link
+            href="/contact"
+            className="inline-flex items-center min-h-[48px] px-7 rounded-full bg-signal text-ink font-display font-semibold"
+          >
+            Talk to us
+          </Link>
+        </div>
       </section>
     </div>
   );

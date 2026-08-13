@@ -83,6 +83,12 @@ export default function PrivacyPage() {
                 <td>Consent (one tap, one use)</td>
               </tr>
               <tr>
+                <td>School sharing (only if you switch it on)</td>
+                <td>Lets your school’s careers lead see your saved, booked and attended events and your notes</td>
+                <td>Shared while the setting is on; stops instantly when you turn it off</td>
+                <td>Consent (off by default, revocable)</td>
+              </tr>
+              <tr>
                 <td>Support chat messages</td>
                 <td>To answer your question and check answer quality</td>
                 <td>Our servers, deleted within 90 days</td>
@@ -113,7 +119,12 @@ export default function PrivacyPage() {
             <li>We never store precise coordinates or track where you go.</li>
             <li>We never train any AI model on user data.</li>
             <li>We never build a profile of you, and we never recommend events based on one.</li>
-            <li>We never show any user’s information to another user or to an organiser.</li>
+            <li>
+              We never show any user’s information to another user or to an organiser. The one
+              exception is yours to control: if your school uses onTrack, you can choose to
+              share your activity record with them from the You tab — off by default, revocable
+              instantly, and it never includes anything you report through Report a concern.
+            </li>
           </ul>
         </PolicyNote>
       </PolicySection>

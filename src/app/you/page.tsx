@@ -236,6 +236,24 @@ export default function YouPage() {
             </span>
           </span>
         </label>
+        <label className="mt-4 flex items-start gap-3 min-h-[44px]">
+          <input
+            type="checkbox"
+            checked={!!profile.shareWithSchool}
+            onChange={(e) => setProfile({ ...profile, shareWithSchool: e.target.checked })}
+            className="mt-1 w-4 h-4 accent-[#111111]"
+          />
+          <span>
+            <span className="font-medium text-[15px]">Share my record with my school</span>
+            <span className="block text-[13px] text-grey measure">
+              Off by default. If your school uses onTrack, this lets your careers lead see your
+              saved, booked and attended events and your notes — useful for references and UCAS.
+              Turn it off any time and they stop seeing everything, instantly. Reports you make
+              through Report a concern are never shared with your school, whatever you choose
+              here.
+            </span>
+          </span>
+        </label>
       </section>
 
       {/* ------------------------------------------------------ Your data */}
