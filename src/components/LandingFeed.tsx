@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import Link from "next/link";
-import { EVENTS } from "@/lib/events";
+import { publishedEvents } from "@/lib/events";
 import { daysUntil } from "@/lib/format";
 import { EventCard, EventCardSkeleton } from "./EventCard";
 import { useMounted } from "@/lib/useMediaQuery";
@@ -15,7 +15,7 @@ import { useMounted } from "@/lib/useMediaQuery";
 export function LandingFeed() {
   const mounted = useMounted();
   const sample = useMemo(() => {
-    const upcoming = EVENTS.filter((e) => daysUntil(e.date) >= 0).sort(
+    const upcoming = publishedEvents().filter((e) => daysUntil(e.date) >= 0).sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
     const pick = (intent: string, n: number) => upcoming.filter((e) => e.intent === intent).slice(0, n);

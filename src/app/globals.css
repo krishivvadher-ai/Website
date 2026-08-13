@@ -5,6 +5,10 @@
   --color-paper: #fbf9f5;
   --color-signal: #d9ff3d;
   --color-coral: #ff5a3d;
+  /* coral fails AA as small text on paper/white (~3.1:1); this darker
+     variant (~5.4:1) is the text-safe version. Coral itself remains the
+     fill/border accent. */
+  --color-coral-deep: #b83a12;
   --color-grey: #6b6b6b;
   --color-line: #e3e0da;
 
@@ -181,5 +185,23 @@ h3,
 @media (max-width: 1023px) {
   .maplibregl-ctrl-bottom-right {
     margin-bottom: 200px;
+  }
+}
+
+/* Print: the "What I've done" list prints as a single tidy page — all
+   chrome hidden, plain black on white. */
+@media print {
+  header,
+  footer,
+  nav,
+  .print-hide {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+  .card {
+    border: none;
   }
 }

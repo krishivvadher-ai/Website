@@ -1,5 +1,5 @@
-// Default map centre for the launch area: Hatfield, Hertfordshire.
-export const DEFAULT_LOCATION = { lat: 51.763, lng: -0.228, label: "Hatfield" };
+// Default map centre for the launch area: Stratford, East London.
+export const DEFAULT_LOCATION = { lat: 51.5416, lng: -0.0042, label: "Stratford" };
 
 /** Great-circle distance in miles. */
 export function distanceMiles(aLat: number, aLng: number, bLat: number, bLng: number): number {

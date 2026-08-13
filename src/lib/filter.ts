@@ -81,7 +81,7 @@ export function applyFilters(
     },
     {
       name: "distance",
-      hint: (f) => `Search the whole UK instead of ${f.distanceMiles} miles`,
+      hint: (f) => `Search all of London instead of ${f.distanceMiles} miles`,
       test: (e) => filters.distanceMiles === null || eventDistance(e, origin) <= filters.distanceMiles,
     },
     { name: "date", hint: () => "Try a wider date range", test: (e) => inDateRange(e, filters.dateRange) },

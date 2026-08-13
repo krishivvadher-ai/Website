@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { EVENTS } from "@/lib/events";
+import { publishedEvents } from "@/lib/events";
 import { DEFAULT_FILTERS, type Filters, type OnTrackEvent } from "@/lib/types";
 import { applyFilters } from "@/lib/filter";
 import { DEFAULT_LOCATION } from "@/lib/geo";
@@ -104,7 +104,7 @@ function MapView({
   const selectRef = useRef<(id: string, pan: boolean) => void>(() => {});
 
   const { events } = useMemo(
-    () => applyFilters(EVENTS, filters, profile, DEFAULT_LOCATION),
+    () => applyFilters(publishedEvents(), filters, profile, DEFAULT_LOCATION),
     [filters, profile]
   );
 
@@ -132,8 +132,8 @@ function MapView({
     });
     mapRef.current = map;
 
-    // Show the whole UK with every pin clear of the floating UI
-    const bounds = eventsBounds(EVENTS);
+    // Show the whole launch area with every pin clear of the floating UI
+    const bounds = eventsBounds(publishedEvents());
     if (bounds) {
       map.fitBounds(bounds, {
         padding: isDesktop
@@ -177,7 +177,7 @@ function MapView({
   }, [isDesktop]);
 
   // Radius circle follows the slider (only when a radius is set — the
-  // default is the whole UK)
+  // default is all of London)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -265,7 +265,7 @@ function MapView({
     }
   }, [events, selectedId, hoveredId, mapFailed, zoomStamp, isDesktop, mapReady]);
 
-  const useMyLocation = () => {
+  const requestMyLocation = () => {
     setLocNote(false);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -380,7 +380,7 @@ function MapView({
           <div className="mt-3 flex items-center gap-2 flex-wrap">
             <button
               type="button"
-              onClick={() => (locNote ? useMyLocation() : setLocNote(true))}
+              onClick={() => (locNote ? requestMyLocation() : setLocNote(true))}
               className="min-h-[44px] px-4 rounded-full border border-line bg-white text-[13px] font-medium"
             >
               Use my location
@@ -388,7 +388,7 @@ function MapView({
             {locNote && (
               <span className="text-[12px] text-grey bg-white border border-line rounded-lg px-3 py-2">
                 Used once to centre the map — never stored.{" "}
-                <button type="button" className="underline text-ink" onClick={useMyLocation}>
+                <button type="button" className="underline text-ink" onClick={requestMyLocation}>
                   OK
                 </button>
               </span>

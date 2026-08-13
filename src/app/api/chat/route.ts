@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { findHelpTopic, HELP_TOPICS } from "@/lib/helpContent";
-import { EVENTS } from "@/lib/events";
+import { publishedEvents } from "@/lib/events";
 import { formatDate } from "@/lib/format";
 import { eventAgeBadge } from "@/lib/age";
 
@@ -31,22 +31,42 @@ function rateLimited(ip: string): boolean {
 
 // Input safety screen: route real-world risk to real support, never a dead
 // end. Deliberately broad — false positives cost a canned message, false
-// negatives cost more.
-const CRISIS_PATTERNS = /suicide|self.?harm|kill (myself|me)|hurt (myself|me)|end my life|abuse|assault/i;
+// negatives cost more. Mental-health, medical and self-harm topics are
+// refused outright and handed off; the model never answers them.
+const CRISIS_PATTERNS = /suicide|self.?harm|kill (myself|me)|hurt (myself|me)|end my life|abuse|assault|overdose/i;
+const HEALTH_PATTERNS =
+  /depress|anxiet|anxious about (my|me|life)|panic attack|eating disorder|therap(y|ist)|medication|diagnos|mental health|counsell/i;
 const PII_REQUEST_BLOCK = /(date of birth|dob|home address|postcode|phone number|school name|what school)/i;
 
 const CRISIS_RESPONSE =
   "It sounds like you might be going through something serious. This chat is only for event questions, but you deserve real support: Childline is free on 0800 1111 (under 19), Samaritans on 116 123 (any age, any time), or text SHOUT to 85258. If you're in immediate danger, call 999. The onTrack team is also reachable via Talk to a person above.";
 
+const HEALTH_RESPONSE =
+  "I'm only built to answer questions about events, and health deserves better than an events bot. For someone real to talk to: Childline is free on 0800 1111, Samaritans are on 116 123 any time, and for anything medical speak to your GP or call 111. If it's urgent, call 999.";
+
+/**
+ * Every safety hand-off is logged (kind + timestamp only, never message
+ * content). Transcript retention is capped at 90 days server-side.
+ * TODO: replace console logging with the durable safety-event log, and wire
+ * the 90-day transcript deletion job.
+ *
+ * Note: chat output is render-only in the panel — there is deliberately no
+ * share, save or post mechanism for chat content anywhere in the product.
+ */
+function logHandOff(kind: "crisis" | "health" | "pii") {
+  console.warn(`[chat] safety hand-off: ${kind} at ${new Date().toISOString()}`);
+}
+
 function systemPrompt(): string {
-  const eventSummaries = EVENTS.slice(0, 40)
+  const eventSummaries = publishedEvents().slice(0, 40)
     .map((e) => `- ${e.title} | ${formatDate(e.date)} | ${e.venue.area} | ${eventAgeBadge(e)} | ${e.price === 0 ? "Free" : `£${(e.price / 100).toFixed(2)}`}${e.applicationDeadline ? ` | applications close ${formatDate(e.applicationDeadline)}` : ""}`)
     .join("\n");
   const help = HELP_TOPICS.map((t) => `## ${t.title}\n${t.answer}`).join("\n\n");
-  return `You are the onTrack support assistant. onTrack helps 13–25 year olds across the UK find and track events.
+  return `You are the onTrack support assistant. onTrack helps 13–18 year olds in East London find and track events.
 
 You are a support tool with a defined job, not a companion. Many users are minors. Hard rules:
 - Answer ONLY questions about: age eligibility, application deadlines, refunds, ticket transfers, what fees cover, how to find events, and venue accessibility. For anything else say you can't help with that here and point to "Talk to a person".
+- REFUSE all mental-health, medical and self-harm topics outright. Do not advise, sympathise at length, or engage — hand off immediately to Childline 0800 1111, Samaritans 116 123, and 999 for danger.
 - NEVER ask for date of birth, address, school, phone number, or any personal details. Never restate a user's age back to them.
 - Never invent deadlines, eligibility rules, refund terms or event details. If the grounding below doesn't answer it, say "I don't know — here's how to reach the team" and point to Talk to a person.
 - Never recommend an event whose age band may be outside the user's eligibility; when unsure, tell them the app filters their feed to eligible events automatically.
@@ -93,9 +113,15 @@ export async function POST(req: NextRequest) {
   }
 
   if (CRISIS_PATTERNS.test(message)) {
+    logHandOff("crisis");
     return streamText(CRISIS_RESPONSE);
   }
+  if (HEALTH_PATTERNS.test(message)) {
+    logHandOff("health");
+    return streamText(HEALTH_RESPONSE);
+  }
   if (PII_REQUEST_BLOCK.test(message)) {
+    logHandOff("pii");
     return streamText(
       "I never ask for or handle personal details like that in chat — and you shouldn’t share them here either. If an account issue needs identity checks, use Talk to a person and the team will do it properly."
     );

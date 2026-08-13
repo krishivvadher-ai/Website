@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { EVENTS } from "@/lib/events";
+import { publishedEvents } from "@/lib/events";
+import type { OnTrackEvent } from "@/lib/types";
 import { daysUntil, formatDate, formatPrice } from "@/lib/format";
 import { eventAgeBadge } from "@/lib/age";
 import { categoryBySlug } from "@/lib/categories";
@@ -24,7 +25,7 @@ export function HeroSlideshow() {
   const reducedMotion = useRef(false);
 
   const promoEvents = useMemo(() => {
-    const upcoming = EVENTS.filter((e) => daysUntil(e.date) >= 0).sort(
+    const upcoming = publishedEvents().filter((e) => daysUntil(e.date) >= 0).sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
     // Alternate fun and useful so the hero itself shows the mix
@@ -140,7 +141,7 @@ function PromoSlide({ active }: { active: boolean }) {
       }
     >
       <Logo light markClass="h-8 w-8" textClass="text-[30px] lg:text-[34px]" />
-      <p className="pill mt-5 inline-block w-fit border border-paper/50 px-3 py-1">Across the UK · free to use</p>
+      <p className="pill mt-5 inline-block w-fit border border-paper/50 px-3 py-1">East London · free for 13–18s</p>
       <h1 className="mt-5 text-[36px] lg:text-[56px] max-w-[16ch] text-paper">Find things worth your time.</h1>
       <p className="mt-4 font-display font-semibold text-[18px] lg:text-[24px] text-signal">
         Find it. Fit it. Never miss it.
@@ -167,7 +168,7 @@ function PromoSlide({ active }: { active: boolean }) {
   );
 }
 
-function EventSlide({ event, active }: { event: (typeof EVENTS)[number]; active: boolean }) {
+function EventSlide({ event, active }: { event: OnTrackEvent; active: boolean }) {
   const theme = posterTheme(event.slug);
   const catName = categoryBySlug(event.category)?.name ?? event.category;
   return (

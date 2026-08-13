@@ -11,7 +11,7 @@ import { formatMiles } from "@/lib/geo";
 import { useApp } from "@/lib/store";
 import { useIsDesktop } from "@/lib/useMediaQuery";
 import { CardImage } from "@/components/CardImage";
-import { AgeBadge, PriceTag } from "@/components/badges";
+import { AgeBadge, PriceTag, VerifiedBadge } from "@/components/badges";
 import { ShareActions } from "@/components/ShareActions";
 
 const VenueMap = dynamic(() => import("@/components/VenueMap").then((m) => m.VenueMap), {
@@ -20,7 +20,7 @@ const VenueMap = dynamic(() => import("@/components/VenueMap").then((m) => m.Ven
 });
 
 export function EventDetail({ event }: { event: OnTrackEvent }) {
-  const { isSaved, toggleSaved } = useApp();
+  const { isSaved, toggleSaved, attended, setAttended } = useApp();
   const isDesktop = useIsDesktop();
   const saved = isSaved(event.id);
   const [toast, setToast] = useState<string | null>(null);
@@ -43,7 +43,7 @@ export function EventDetail({ event }: { event: OnTrackEvent }) {
         <PriceTag event={event} />
         <AgeBadge event={event} />
       </div>
-      {flag && <p className="mt-3 text-[14px] font-semibold text-coral">{flag}</p>}
+      {flag && <p className="mt-3 text-[14px] font-semibold text-coral-deep">{flag}</p>}
       <button
         type="button"
         disabled={closed}
@@ -69,6 +69,16 @@ export function EventDetail({ event }: { event: OnTrackEvent }) {
           .
         </p>
       )}
+      <button
+        type="button"
+        onClick={() =>
+          setAttended(event.id, attended[event.id] ? null : { note: "", markedAt: new Date().toISOString() })
+        }
+        aria-pressed={!!attended[event.id]}
+        className="mt-3 w-full min-h-[44px] rounded-full border border-line text-[14px] font-medium hover:border-ink"
+      >
+        {attended[event.id] ? "✓ On my “What I’ve done” list" : "I went to this"}
+      </button>
       <div className="mt-4 pt-4 border-t border-line">
         <ShareActions event={event} />
       </div>
@@ -132,6 +142,9 @@ export function EventDetail({ event }: { event: OnTrackEvent }) {
 
         <h2 className="mt-10 text-[22px]">Run by</h2>
         <p className="mt-2 text-[15px] text-grey">{event.organiser}</p>
+        <div className="mt-1">
+          <VerifiedBadge level={event.organiserVerified} />
+        </div>
 
         <div className="mt-10 lg:hidden">
           <ShareActions event={event} />
@@ -146,7 +159,7 @@ export function EventDetail({ event }: { event: OnTrackEvent }) {
         <div className="fixed inset-x-0 bottom-14 z-30 bg-paper border-t border-line px-4 py-3 tabbar-safe">
           <div className="flex items-center gap-4">
             <PriceTag event={event} />
-            {flag && <span className="text-[12px] font-semibold text-coral leading-tight">{flag}</span>}
+            {flag && <span className="text-[12px] font-semibold text-coral-deep leading-tight">{flag}</span>}
             <button
               type="button"
               onClick={onSave}

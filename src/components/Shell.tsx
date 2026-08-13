@@ -22,13 +22,45 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh flex flex-col">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:bg-ink focus:text-paper focus:px-4 focus:py-2 focus:rounded-full"
+      >
+        Skip to content
+      </a>
       <DesktopHeader />
-      <main className={`flex-1 ${isDesktop === false && !isMap ? "pb-[76px]" : ""}`}>{children}</main>
+      <main id="main-content" className={`flex-1 ${isDesktop === false && !isMap ? "pb-[76px]" : ""}`}>
+        {children}
+      </main>
       {!isMap && <Footer />}
       <ChatWidget />
+      {/* Children's Code Standard 15: the safety tools are reachable in one
+          tap from every screen — a header link on desktop, a fixed button on
+          mobile. */}
+      {isDesktop === false && <MobileReportButton onMap={isMap} />}
       {/* The bottom tab bar is not rendered at all on desktop — not just hidden */}
       {isDesktop === false && <MobileTabBar />}
     </div>
+  );
+}
+
+function MobileReportButton({ onMap }: { onMap: boolean }) {
+  return (
+    <Link
+      href="/report"
+      className={`print-hide fixed left-4 z-40 ${onMap ? "bottom-[200px]" : "bottom-[72px]"} inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-full bg-paper border border-ink text-ink text-[13px] font-semibold`}
+    >
+      <FlagIcon />
+      Report a concern
+    </Link>
+  );
+}
+
+function FlagIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 21V4m0 0h13l-3 4 3 4H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -76,10 +108,17 @@ function DesktopHeader() {
           />
         </form>
         <Link
-          href="/organiser"
+          href="/for-organisers"
           className="text-[14px] font-medium text-grey hover:text-ink whitespace-nowrap"
         >
           For organisers
+        </Link>
+        <Link
+          href="/report"
+          className="inline-flex items-center gap-1.5 text-[14px] font-semibold whitespace-nowrap border border-ink rounded-full px-4 min-h-[40px] hover:bg-ink hover:text-paper transition-colors"
+        >
+          <FlagIcon />
+          Report a concern
         </Link>
       </div>
     </header>
@@ -119,17 +158,17 @@ function MobileTabBar() {
 function Footer() {
   return (
     <footer className="bg-ink text-paper mt-16">
-      <div className="max-w-[1200px] mx-auto px-6 py-16 grid gap-10 md:grid-cols-3">
+      <div className="max-w-[1200px] mx-auto px-6 py-16 grid gap-10 md:grid-cols-4">
         <div>
           <Logo light markClass="h-6 w-6" textClass="text-2xl" />
           <p className="mt-2 font-display font-semibold text-[15px] text-signal">
             Find it. Fit it. Never miss it.
           </p>
           <p className="mt-3 text-[14px] text-paper/70 measure">
-            One place to find and track things worth doing, across the UK.
+            One place to find and track things worth doing — starting in East London.
           </p>
         </div>
-        <nav className="text-[14px] grid gap-2" aria-label="Footer">
+        <nav className="text-[14px] grid gap-2 content-start" aria-label="Footer">
           <Link href="/browse" className="hover:underline">
             Browse events
           </Link>
@@ -139,15 +178,42 @@ function Footer() {
           <Link href="/deadlines" className="hover:underline">
             Deadlines
           </Link>
-          <Link href="/organiser" className="hover:underline">
-            List an event
+          <Link href="/for-organisers" className="hover:underline">
+            For organisers
+          </Link>
+          <Link href="/report" className="hover:underline">
+            Report a concern
+          </Link>
+          <Link href="/about" className="hover:underline">
+            About us
           </Link>
           <Link href="/contact" className="hover:underline">
             Contact us
           </Link>
         </nav>
+        <nav className="text-[14px] grid gap-2 content-start" aria-label="Legal">
+          <Link href="/privacy" className="hover:underline">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:underline">
+            Terms of use
+          </Link>
+          <Link href="/safeguarding" className="hover:underline">
+            Safeguarding
+          </Link>
+          <Link href="/organiser-terms" className="hover:underline">
+            Organiser terms
+          </Link>
+          <Link href="/cookies" className="hover:underline">
+            Cookies and storage
+          </Link>
+          <Link href="/accessibility" className="hover:underline">
+            Accessibility
+          </Link>
+        </nav>
         <div className="text-[14px] text-paper/70">
-          <p>Free for everyone under 25. No paywall, no ads in your feed.</p>
+          <p>Free for every 13–18 year old, forever. No paywall, no ads in your feed.</p>
+          <p className="mt-2">No third-party cookies, no tracking, no data sold — ever.</p>
           <p className="mt-2">© {new Date().getFullYear()} onTrack</p>
         </div>
       </div>

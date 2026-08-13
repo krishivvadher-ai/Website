@@ -176,7 +176,7 @@ export function DeadlineCalendar({ savedEvents }: { savedEvents: OnTrackEvent[] 
           <ul className="mt-2 space-y-2">
             {selected.deadlines.map((e) => (
               <li key={`d-${e.id}`} className="text-[14px]">
-                <span className="font-semibold text-coral">Applications close:</span>{" "}
+                <span className="font-semibold text-coral-deep">Applications close:</span>{" "}
                 <Link href={`/events/${e.slug}`} className="underline">
                   {e.title}
                 </Link>

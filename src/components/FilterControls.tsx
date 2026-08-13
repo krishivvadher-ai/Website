@@ -110,7 +110,7 @@ export function FilterControls({
           Distance
         </h3>
         <label className="block text-[13px] text-grey mb-1" htmlFor="distance-slider">
-          {filters.distanceMiles === null ? "Whole UK" : `Within ${filters.distanceMiles} miles`}
+          {filters.distanceMiles === null ? "All of London" : `Within ${filters.distanceMiles} miles`}
         </label>
         <input
           id="distance-slider"
@@ -125,7 +125,7 @@ export function FilterControls({
           }}
           className="w-full accent-[#111111]"
         />
-        <p className="mt-1 text-[12px] text-grey">Slide all the way right for the whole UK.</p>
+        <p className="mt-1 text-[12px] text-grey">Slide all the way right for all of London.</p>
       </section>
 
       <section aria-labelledby="filter-date">

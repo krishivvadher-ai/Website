@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           model: process.env.CHAT_MODEL ?? "claude-haiku-4-5-20251001",
           max_tokens: 800,
-          system: `You draft event listings for onTrack (events for 13–25 year olds, UK). Given a rough description, return ONLY a JSON object: {"title": string under 60 chars, "description": string (structured, plain, sentence case), "category": one of ${CATEGORIES.map((c) => c.slug).join("|")}, "intent": "fun"|"useful"|"both", "tags": string[] max 5, "suggestedAgeBand": e.g. "All ages"|"18+"|"15–16", "needsDeadline": boolean, "warnings": string[] (flag any contradiction between the description and the age band)}. No markdown, no commentary.`,
+          system: `You draft event listings for onTrack (events for 13–18 year olds, East London). Given a rough description, return ONLY a JSON object: {"title": string under 60 chars, "description": string (structured, plain, sentence case), "category": one of ${CATEGORIES.map((c) => c.slug).join("|")}, "intent": "fun"|"useful"|"both", "tags": string[] max 5, "suggestedAgeBand": e.g. "All ages"|"18+"|"15–16", "needsDeadline": boolean, "warnings": string[] (flag any contradiction between the description and the age band)}. No markdown, no commentary.`,
           messages: [{ role: "user", content: rough }],
         }),
       });

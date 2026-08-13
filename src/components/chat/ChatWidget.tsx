@@ -81,7 +81,7 @@ export function ChatWidget() {
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-label={open ? "Close support chat" : "Open support chat"}
-        className={`fixed z-50 right-4 lg:right-6 ${
+        className={`print-hide fixed z-50 right-4 lg:right-6 ${
           isDesktop === false ? "bottom-[72px]" : "bottom-6"
         } w-14 h-14 rounded-full bg-ink text-signal flex items-center justify-center border-2 border-paper`}
       >
@@ -180,7 +180,8 @@ export function ChatWidget() {
             </button>
           </form>
           <p className="px-4 pb-3 text-[11px] text-grey bg-paper">
-            Chats are logged briefly for quality, then deleted. Never share personal details here.
+            Chats are logged for quality and deleted within 90 days. Never share personal
+            details here.
           </p>
         </div>
       )}

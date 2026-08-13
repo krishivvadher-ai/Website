@@ -1,7 +1,21 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { Profile, ReminderPrefs } from "./types";
+import type { AttendedEntry, AuditEntry, ConcernReport, Profile, ReminderPrefs } from "./types";
+
+export interface PendingListing {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  intent: string;
+  suggestedAgeBand: string;
+  deadline?: string;
+  status: "pending";
+  /** who reviewed it, when, and what changed — the provider-content evidence
+      trail. TODO: persist server-side; local state is demo-only. */
+  audit: AuditEntry[];
+}
 
 interface AppState {
   ready: boolean;
@@ -12,8 +26,18 @@ interface AppState {
   isSaved: (eventId: string) => boolean;
   reminders: Record<string, ReminderPrefs>;
   setReminder: (eventId: string, prefs: ReminderPrefs | null) => void;
+  attended: Record<string, AttendedEntry>;
+  setAttended: (eventId: string, entry: AttendedEntry | null) => void;
+  reports: ConcernReport[];
+  addReport: (r: Omit<ConcernReport, "id" | "submittedAt">) => void;
+  pendingListings: PendingListing[];
+  addPendingListing: (l: Omit<PendingListing, "id" | "status" | "audit">) => void;
   organiserSignedIn: boolean;
   setOrganiserSignedIn: (v: boolean) => void;
+  /** the whole local state as JSON — powers "download my data" */
+  exportData: () => string;
+  /** wipe everything this device knows — powers "delete my account" */
+  deleteAllData: () => void;
 }
 
 const DEFAULT_PROFILE: Profile = { showIneligible: false };
@@ -26,6 +50,9 @@ interface Persisted {
   profile: Profile;
   saved: string[];
   reminders: Record<string, ReminderPrefs>;
+  attended: Record<string, AttendedEntry>;
+  reports: ConcernReport[];
+  pendingListings: PendingListing[];
   organiserSignedIn: boolean;
 }
 
@@ -34,6 +61,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfileState] = useState<Profile>(DEFAULT_PROFILE);
   const [saved, setSaved] = useState<string[]>([]);
   const [reminders, setReminders] = useState<Record<string, ReminderPrefs>>({});
+  const [attended, setAttendedState] = useState<Record<string, AttendedEntry>>({});
+  const [reports, setReports] = useState<ConcernReport[]>([]);
+  const [pendingListings, setPendingListings] = useState<PendingListing[]>([]);
   const [organiserSignedIn, setOrganiserSignedIn] = useState(false);
 
   useEffect(() => {
@@ -44,6 +74,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (data.profile) setProfileState({ ...DEFAULT_PROFILE, ...data.profile });
         if (Array.isArray(data.saved)) setSaved(data.saved);
         if (data.reminders) setReminders(data.reminders);
+        if (data.attended) setAttendedState(data.attended);
+        if (Array.isArray(data.reports)) setReports(data.reports);
+        if (Array.isArray(data.pendingListings)) setPendingListings(data.pendingListings);
         if (data.organiserSignedIn) setOrganiserSignedIn(true);
       }
     } catch {
@@ -54,13 +87,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!ready) return;
-    const data: Persisted = { profile, saved, reminders, organiserSignedIn };
+    const data: Persisted = { profile, saved, reminders, attended, reports, pendingListings, organiserSignedIn };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
       // storage full or unavailable — the app still works, it just forgets
     }
-  }, [ready, profile, saved, reminders, organiserSignedIn]);
+  }, [ready, profile, saved, reminders, attended, reports, pendingListings, organiserSignedIn]);
 
   const setProfile = useCallback((p: Profile) => setProfileState(p), []);
   const toggleSaved = useCallback((id: string) => {
@@ -75,6 +108,62 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
   }, []);
+  const setAttended = useCallback((id: string, entry: AttendedEntry | null) => {
+    setAttendedState((prev) => {
+      const next = { ...prev };
+      if (entry === null) delete next[id];
+      else next[id] = entry;
+      return next;
+    });
+  }, []);
+  const addReport = useCallback((r: Omit<ConcernReport, "id" | "submittedAt">) => {
+    setReports((prev) => [
+      ...prev,
+      { ...r, id: `rep_${prev.length + 1}_${new Date().getTime().toString(36)}`, submittedAt: new Date().toISOString() },
+    ]);
+  }, []);
+  const addPendingListing = useCallback((l: Omit<PendingListing, "id" | "status" | "audit">) => {
+    setPendingListings((prev) => [
+      ...prev,
+      {
+        ...l,
+        id: `lst_${prev.length + 1}_${new Date().getTime().toString(36)}`,
+        status: "pending",
+        audit: [
+          {
+            at: new Date().toISOString(),
+            by: "demo organiser",
+            action: "submitted",
+            detail: "Awaiting onTrack editorial review before publication",
+          },
+        ],
+      },
+    ]);
+  }, []);
+
+  const exportData = useCallback(() => {
+    const data: Persisted = { profile, saved, reminders, attended, reports, pendingListings, organiserSignedIn };
+    return JSON.stringify(data, null, 2);
+  }, [profile, saved, reminders, attended, reports, pendingListings, organiserSignedIn]);
+
+  const deleteAllData = useCallback(() => {
+    setProfileState(DEFAULT_PROFILE);
+    setSaved([]);
+    setReminders({});
+    setAttendedState({});
+    setReports([]);
+    setPendingListings([]);
+    setOrganiserSignedIn(false);
+    try {
+      // Clear everything onTrack has ever put on this device, including the
+      // age-gate flag — deletion means deletion.
+      Object.keys(window.localStorage)
+        .filter((k) => k.startsWith("ontrack."))
+        .forEach((k) => window.localStorage.removeItem(k));
+    } catch {
+      // storage unavailable — in-memory state is already cleared
+    }
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -86,10 +175,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isSaved,
       reminders,
       setReminder,
+      attended,
+      setAttended,
+      reports,
+      addReport,
+      pendingListings,
+      addPendingListing,
       organiserSignedIn,
       setOrganiserSignedIn,
+      exportData,
+      deleteAllData,
     }),
-    [ready, profile, setProfile, saved, toggleSaved, isSaved, reminders, setReminder, organiserSignedIn]
+    [
+      ready,
+      profile,
+      setProfile,
+      saved,
+      toggleSaved,
+      isSaved,
+      reminders,
+      setReminder,
+      attended,
+      setAttended,
+      reports,
+      addReport,
+      pendingListings,
+      addPendingListing,
+      organiserSignedIn,
+      exportData,
+      deleteAllData,
+    ]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

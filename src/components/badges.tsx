@@ -1,5 +1,6 @@
 import React from "react";
-import type { OnTrackEvent } from "@/lib/types";
+import Link from "next/link";
+import type { OnTrackEvent, VerificationLevel } from "@/lib/types";
 import { eventAgeBadge } from "@/lib/age";
 import { dateBadge, deadlineFlag, formatPrice } from "@/lib/format";
 
@@ -43,5 +44,28 @@ export function PriceTag({ event }: { event: Pick<OnTrackEvent, "price" | "feeBr
 export function DeadlineFlag({ iso }: { iso?: string }) {
   const flag = deadlineFlag(iso);
   if (!flag) return null;
-  return <span className="text-[13px] font-semibold text-coral">{flag}</span>;
+  return <span className="text-[13px] font-semibold text-coral-deep">{flag}</span>;
+}
+
+/**
+ * Safeguarding verification badge. The wording is deliberate and load-
+ * bearing: "self-certified" when the organiser only made declarations,
+ * "verified" only when onTrack has actually seen the documents. NEVER
+ * render "safe", "trusted", "approved" or "vetted" here — that is an
+ * overclaim with misrepresentation and ASA consequences.
+ */
+export function VerifiedBadge({ level, className = "" }: { level?: VerificationLevel; className?: string }) {
+  if (!level) return null;
+  return (
+    <Link
+      href="/verification"
+      className={`inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.04em] font-medium text-grey hover:text-ink underline decoration-line hover:decoration-ink ${className}`}
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        {level === "verified" && <path d="m8.5 12 2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />}
+      </svg>
+      {level === "verified" ? "Safeguarding verified" : "Safeguarding self-certified"}
+    </Link>
+  );
 }

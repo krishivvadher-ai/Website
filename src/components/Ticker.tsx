@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import Link from "next/link";
-import { EVENTS } from "@/lib/events";
+import { publishedEvents } from "@/lib/events";
 import { formatDate, formatPrice } from "@/lib/format";
 import { daysUntil } from "@/lib/format";
 import { useMounted } from "@/lib/useMediaQuery";
@@ -16,7 +16,7 @@ import { useMounted } from "@/lib/useMediaQuery";
 export function Ticker() {
   const mounted = useMounted();
   const items = useMemo(() => {
-    const upcoming = EVENTS.filter((e) => daysUntil(e.date) >= 0).sort(
+    const upcoming = publishedEvents().filter((e) => daysUntil(e.date) >= 0).sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
     const funSide = upcoming.filter((e) => e.intent === "fun" || e.intent === "both");

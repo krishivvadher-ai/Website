@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import Link from "next/link";
-import { EVENTS, eventBySlug } from "@/lib/events";
+import { publishedEvents, eventBySlug } from "@/lib/events";
 import { isEligible, eventAgeBadge } from "@/lib/age";
 import { daysUntil } from "@/lib/format";
 import { useApp } from "@/lib/store";
@@ -20,7 +20,7 @@ export function EventDetailGate({ slug }: { slug: string }) {
 
   const alternatives = useMemo(() => {
     if (!event) return [];
-    return EVENTS.filter(
+    return publishedEvents().filter(
       (e) => e.id !== event.id && daysUntil(e.date) >= 0 && isEligible(e, profile)
     )
       .sort((a, b) => {
