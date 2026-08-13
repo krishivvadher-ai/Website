@@ -11,7 +11,7 @@ import { formatMiles } from "@/lib/geo";
 import { useApp } from "@/lib/store";
 import { useIsDesktop } from "@/lib/useMediaQuery";
 import { CardImage } from "@/components/CardImage";
-import { AgeBadge, PriceTag } from "@/components/badges";
+import { AgeBadge, PriceTag, VerifiedBadge } from "@/components/badges";
 import { ShareActions } from "@/components/ShareActions";
 
 const VenueMap = dynamic(() => import("@/components/VenueMap").then((m) => m.VenueMap), {
@@ -142,6 +142,9 @@ export function EventDetail({ event }: { event: OnTrackEvent }) {
 
         <h2 className="mt-10 text-[22px]">Run by</h2>
         <p className="mt-2 text-[15px] text-grey">{event.organiser}</p>
+        <div className="mt-1">
+          <VerifiedBadge level={event.organiserVerified} />
+        </div>
 
         <div className="mt-10 lg:hidden">
           <ShareActions event={event} />

@@ -8,7 +8,7 @@ import { formatDate, formatTime } from "@/lib/format";
 import { eventDistance } from "@/lib/filter";
 import { formatMiles } from "@/lib/geo";
 import { CardImage } from "./CardImage";
-import { AgeBadge, DateBadge, DeadlineFlag, PriceTag } from "./badges";
+import { AgeBadge, DateBadge, DeadlineFlag, PriceTag, VerifiedBadge } from "./badges";
 import { useApp } from "@/lib/store";
 
 // One card component for every listing. A gig and a networking evening use
@@ -69,6 +69,7 @@ export function EventCard({
           {formatMiles(miles)}
           {event.journeyMins !== undefined && <> · ~{event.journeyMins} min by public transport</>}
         </p>
+        <VerifiedBadge level={event.organiserVerified} />
         <div className="mt-auto pt-2 flex items-end justify-between gap-3 border-t border-line">
           <DeadlineFlag iso={event.applicationDeadline} />
           <span className="ml-auto">

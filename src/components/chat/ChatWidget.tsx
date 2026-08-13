@@ -180,7 +180,8 @@ export function ChatWidget() {
             </button>
           </form>
           <p className="px-4 pb-3 text-[11px] text-grey bg-paper">
-            Chats are logged briefly for quality, then deleted. Never share personal details here.
+            Chats are logged for quality and deleted within 90 days. Never share personal
+            details here.
           </p>
         </div>
       )}

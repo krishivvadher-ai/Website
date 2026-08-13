@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import Link from "next/link";
 import { EVENTS } from "@/lib/events";
 import { CATEGORIES, categoryBySlug } from "@/lib/categories";
 import { useApp } from "@/lib/store";
@@ -45,6 +46,17 @@ export default function OrganiserPage() {
           >
             Sign in as demo organiser
           </button>
+          <p className="mt-3 text-[13px] text-grey">
+            New here?{" "}
+            <Link href="/organiser/onboarding" className="underline text-ink">
+              Set up your organisation
+            </Link>{" "}
+            — ten minutes, including the safeguarding self-certification.{" "}
+            <Link href="/for-organisers" className="underline text-ink">
+              See pricing
+            </Link>
+            .
+          </p>
         </div>
       </div>
     );
@@ -72,6 +84,7 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
 
       <StatsRow />
       <ListingsTable />
+      <PendingListings />
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <ListingAssistant />
@@ -168,9 +181,51 @@ function ListingsTable() {
   );
 }
 
+function PendingListings() {
+  const { pendingListings } = useApp();
+  if (pendingListings.length === 0) return null;
+  return (
+    <section className="card mt-6 p-6" aria-labelledby="pending-heading">
+      <h2 id="pending-heading" className="text-[22px]">
+        Awaiting review
+      </h2>
+      <p className="mt-1 text-[13px] text-grey measure">
+        Not publicly visible. An onTrack reviewer checks every listing — and may edit it for
+        clarity, age accuracy and safeguarding — before publication.
+      </p>
+      <ul className="mt-4 space-y-4">
+        {pendingListings.map((l) => (
+          <li key={l.id} className="border-b border-line pb-4 last:border-0">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-medium text-[15px]">{l.title}</p>
+              <span className="pill bg-line text-ink px-2.5 py-0.5 shrink-0">Pending</span>
+            </div>
+            <p className="text-[13px] text-grey">
+              {l.category} · {l.intent} · suggested age {l.suggestedAgeBand}
+              {l.deadline ? ` · apply by ${l.deadline}` : ""}
+            </p>
+            {/* Audit trail — who did what, when. TODO: persist server-side;
+                local state is demo-only evidence of the workflow. */}
+            <ol className="mt-2 text-[12px] text-grey space-y-0.5">
+              {l.audit.map((a, i) => (
+                <li key={i}>
+                  {new Date(a.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}{" "}
+                  — {a.by}: {a.action}
+                  {a.detail ? ` (${a.detail})` : ""}
+                </li>
+              ))}
+            </ol>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 
 function ListingAssistant() {
+  const { addPendingListing } = useApp();
   const [rough, setRough] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [previous, setPrevious] = useState<Draft | null>(null);
@@ -178,6 +233,24 @@ function ListingAssistant() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deadline, setDeadline] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const submitForReview = () => {
+    if (!draft) return;
+    addPendingListing({
+      title: draft.title,
+      description: draft.description,
+      category: draft.category,
+      intent: draft.intent,
+      suggestedAgeBand: draft.suggestedAgeBand,
+      deadline: deadline || undefined,
+    });
+    setSubmitted(true);
+    setDraft(null);
+    setPrevious(null);
+    setRough("");
+    setDeadline("");
+  };
 
   const generate = async () => {
     setBusy(true);
@@ -212,6 +285,16 @@ function ListingAssistant() {
           {manual ? "Use the assistant" : "Write it manually instead"}
         </button>
       </div>
+
+      {submitted && (
+        <div className="card mt-4 p-4 border-ink" role="status">
+          <p className="text-[14px] font-medium">Submitted for review.</p>
+          <p className="mt-1 text-[13px] text-grey measure">
+            onTrack reviews and publishes every listing. We may edit for clarity, age accuracy
+            and safeguarding before it goes live. You’ll see it under “Awaiting review” below.
+          </p>
+        </div>
+      )}
 
       {manual ? (
         <ManualListingForm />
@@ -332,15 +415,15 @@ function ListingAssistant() {
               </div>
               <button
                 type="button"
-                className="mt-4 min-h-[48px] px-6 rounded-full bg-signal text-ink border border-ink font-display font-semibold disabled:opacity-40"
-                disabled
-                title="Publishing is disabled in this demo"
+                onClick={submitForReview}
+                className="mt-4 min-h-[48px] px-6 rounded-full bg-signal text-ink border border-ink font-display font-semibold"
               >
-                Review and publish
+                Submit for review
               </button>
-              <p className="mt-2 text-[12px] text-grey">
-                Nothing publishes automatically — you review every field first. (Publishing is
-                disabled in this demo.)
+              <p className="mt-2 text-[12px] text-grey measure">
+                onTrack reviews and publishes every listing. We may edit for clarity, age
+                accuracy and safeguarding before it goes live. Nothing you submit is publicly
+                visible until a reviewer publishes it.
               </p>
             </div>
           )}
@@ -364,28 +447,63 @@ function EditableField({ label, value, onChange }: { label: string; value: strin
 }
 
 function ManualListingForm() {
+  const { addPendingListing } = useApp();
+  const [sent, setSent] = useState(false);
+
+  const submit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const title = String(data.get("title") ?? "").trim();
+    if (!title) return;
+    addPendingListing({
+      title: title.slice(0, 60),
+      description: String(data.get("description") ?? ""),
+      category: String(data.get("category") ?? ""),
+      intent: String(data.get("intent") ?? "both").toLowerCase(),
+      suggestedAgeBand: `${data.get("minAge") || "13"}${data.get("maxAge") ? `–${data.get("maxAge")}` : "+"}`,
+      deadline: String(data.get("deadline") ?? "") || undefined,
+    });
+    setSent(true);
+    e.currentTarget.reset();
+  };
+
   return (
-    <div className="mt-4 grid gap-3">
+    <form className="mt-4 grid gap-3" onSubmit={submit}>
       <p className="text-[13px] text-grey">
         The manual path — every field, no assistant. Same review before anything publishes.
       </p>
-      <EditableStatic label="Title (max 60 characters)" />
+      {sent && (
+        <div className="card p-4 border-ink" role="status">
+          <p className="text-[14px] font-medium">Submitted for review.</p>
+          <p className="mt-1 text-[13px] text-grey measure">
+            onTrack reviews and publishes every listing. We may edit for clarity, age accuracy
+            and safeguarding before it goes live.
+          </p>
+        </div>
+      )}
+      <EditableStatic label="Title (max 60 characters)" name="title" required />
       <label className="text-[13px] font-semibold">
         Description
-        <textarea rows={5} className="mt-1 w-full rounded-xl border border-line bg-white p-3 text-[14px] font-normal" />
+        <textarea
+          name="description"
+          rows={5}
+          className="mt-1 w-full rounded-xl border border-line bg-white p-3 text-[14px] font-normal"
+        />
       </label>
       <div className="grid grid-cols-2 gap-3">
         <label className="text-[13px] font-semibold">
           Category
-          <select className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal">
+          <select name="category" className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal">
             {CATEGORIES.map((c) => (
-              <option key={c.slug}>{c.name}</option>
+              <option key={c.slug} value={c.slug}>
+                {c.name}
+              </option>
             ))}
           </select>
         </label>
         <label className="text-[13px] font-semibold">
           Intent tag
-          <select className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal">
+          <select name="intent" className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal">
             <option>Fun</option>
             <option>Useful</option>
             <option>Both</option>
@@ -395,34 +513,40 @@ function ManualListingForm() {
       <div className="grid grid-cols-2 gap-3">
         <label className="text-[13px] font-semibold">
           Event date
-          <input type="date" className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal" />
+          <input type="date" name="eventDate" className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal" />
         </label>
         <label className="text-[13px] font-semibold">
           Application deadline
-          <input type="date" className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal" />
+          <input type="date" name="deadline" className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal" />
         </label>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <EditableStatic label="Minimum age" />
-        <EditableStatic label="Maximum age (optional)" />
+        <EditableStatic label="Minimum age" name="minAge" />
+        <EditableStatic label="Maximum age (optional)" name="maxAge" />
       </div>
       <button
-        type="button"
-        className="min-h-[48px] px-6 rounded-full bg-signal text-ink border border-ink font-display font-semibold disabled:opacity-40"
-        disabled
-        title="Publishing is disabled in this demo"
+        type="submit"
+        className="min-h-[48px] px-6 rounded-full bg-signal text-ink border border-ink font-display font-semibold"
       >
-        Review and publish
+        Submit for review
       </button>
-    </div>
+      <p className="text-[12px] text-grey measure">
+        onTrack reviews and publishes every listing. We may edit for clarity, age accuracy and
+        safeguarding before it goes live.
+      </p>
+    </form>
   );
 }
 
-function EditableStatic({ label }: { label: string }) {
+function EditableStatic({ label, name, required = false }: { label: string; name?: string; required?: boolean }) {
   return (
     <label className="text-[13px] font-semibold">
       {label}
-      <input className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal" />
+      <input
+        name={name}
+        required={required}
+        className="mt-1 w-full h-11 rounded-xl border border-line bg-white px-3 text-[14px] font-normal"
+      />
     </label>
   );
 }
