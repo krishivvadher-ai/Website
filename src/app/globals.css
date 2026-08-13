@@ -183,3 +183,21 @@ h3,
     margin-bottom: 200px;
   }
 }
+
+/* Print: the "What I've done" list prints as a single tidy page — all
+   chrome hidden, plain black on white. */
+@media print {
+  header,
+  footer,
+  nav,
+  .print-hide {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+  .card {
+    border: none;
+  }
+}

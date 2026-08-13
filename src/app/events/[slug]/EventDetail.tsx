@@ -20,7 +20,7 @@ const VenueMap = dynamic(() => import("@/components/VenueMap").then((m) => m.Ven
 });
 
 export function EventDetail({ event }: { event: OnTrackEvent }) {
-  const { isSaved, toggleSaved } = useApp();
+  const { isSaved, toggleSaved, attended, setAttended } = useApp();
   const isDesktop = useIsDesktop();
   const saved = isSaved(event.id);
   const [toast, setToast] = useState<string | null>(null);
@@ -69,6 +69,16 @@ export function EventDetail({ event }: { event: OnTrackEvent }) {
           .
         </p>
       )}
+      <button
+        type="button"
+        onClick={() =>
+          setAttended(event.id, attended[event.id] ? null : { note: "", markedAt: new Date().toISOString() })
+        }
+        aria-pressed={!!attended[event.id]}
+        className="mt-3 w-full min-h-[44px] rounded-full border border-line text-[14px] font-medium hover:border-ink"
+      >
+        {attended[event.id] ? "✓ On my “What I’ve done” list" : "I went to this"}
+      </button>
       <div className="mt-4 pt-4 border-t border-line">
         <ShareActions event={event} />
       </div>
