@@ -1,7 +1,7 @@
 # onTrack
 
-One place to find and track things worth doing — for 13–25 year olds across
-the UK. Split evenly between things that are fun and things that get you
+One place to find and track things worth doing — for 13–18 year olds in
+London, launching in five East London boroughs. Split evenly between things that are fun and things that get you
 somewhere, with plenty that are both.
 
 ## Run it

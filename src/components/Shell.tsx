@@ -126,7 +126,7 @@ function Footer() {
             Find it. Fit it. Never miss it.
           </p>
           <p className="mt-3 text-[14px] text-paper/70 measure">
-            One place to find and track things worth doing, across the UK.
+            One place to find and track things worth doing — starting in East London.
           </p>
         </div>
         <nav className="text-[14px] grid gap-2" aria-label="Footer">
@@ -147,7 +147,7 @@ function Footer() {
           </Link>
         </nav>
         <div className="text-[14px] text-paper/70">
-          <p>Free for everyone under 25. No paywall, no ads in your feed.</p>
+          <p>Free for every 13–18 year old, forever. No paywall, no ads in your feed.</p>
           <p className="mt-2">© {new Date().getFullYear()} onTrack</p>
         </div>
       </div>

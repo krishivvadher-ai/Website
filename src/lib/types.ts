@@ -1,3 +1,17 @@
+// ---------------------------------------------------------------------------
+// PRODUCT BOUNDARY — READ BEFORE ADDING FEATURES
+//
+// onTrack deliberately has NO user-to-user features: no messaging, no
+// comments, no reviews, no user profiles visible to other users, and no
+// image uploads from users. This is a legal position, not a product gap.
+// Every listing is provider content published by onTrack under editorial
+// control, which keeps the service outside the Online Safety Act 2023
+// user-to-user regime. Adding any user-to-user surface (a DM feature, a
+// comment box, a public profile) changes onTrack's legal category and
+// triggers a full OSA risk assessment — that is a decision for legal and
+// the DSL, not a sprint. See /terms and /safeguarding.
+// ---------------------------------------------------------------------------
+
 export type Intent = "fun" | "useful" | "both";
 
 export interface Category {
@@ -7,12 +21,32 @@ export interface Category {
   examples: string;
 }
 
+export type Borough = "Tower Hamlets" | "Newham" | "Hackney" | "Waltham Forest" | "Redbridge";
+
 export interface Venue {
   name: string;
   area: string;
+  borough: Borough;
   lat: number;
   lng: number;
 }
+
+/**
+ * Safeguarding verification level for an organiser.
+ * "self-certified" = the organiser completed our self-certification form.
+ * "verified" = onTrack has actually seen and checked the documents.
+ * NEVER render the words "safe", "trusted", "approved" or "vetted" from
+ * this field — overclaiming is a misrepresentation and ASA risk.
+ */
+export type VerificationLevel = "self-certified" | "verified";
+
+/**
+ * Listing lifecycle. Listings are provider content: nothing an organiser
+ * submits is publicly visible until an onTrack reviewer moves it to
+ * "published". Browse, map and detail queries must only ever return
+ * "published" listings.
+ */
+export type ListingStatus = "draft" | "pending" | "published" | "suspended";
 
 export interface OnTrackEvent {
   id: string;
@@ -32,9 +66,13 @@ export interface OnTrackEvent {
   price: number;
   /** breakdown shown in small text under the price */
   feeBreakdown?: string;
-  /** journey time by public transport in minutes, where available */
+  /** journey time by public transport (TfL) in minutes, where available */
   journeyMins?: number;
   organiser: string;
+  /** safeguarding verification level of the organiser, if any */
+  organiserVerified?: VerificationLevel;
+  /** editorial state — only "published" listings are publicly visible */
+  status: ListingStatus;
   tags: string[];
 }
 
@@ -45,7 +83,7 @@ export interface Filters {
   intent: Intent | "anything";
   categories: string[];
   price: PriceBucket[];
-  /** null = whole UK (the default); a number narrows to that radius */
+  /** null = all of London (the default); a number narrows to that radius */
   distanceMiles: number | null;
   dateRange: DateRange;
   stillOpen: boolean;
@@ -76,4 +114,28 @@ export interface ReminderPrefs {
   twoDays: boolean;
   morningOf: boolean;
   channel: "email" | "push";
+}
+
+/** A "What I've done" entry — stored only on this device, never sent anywhere. */
+export interface AttendedEntry {
+  /** user's own one-line note on what they got from it */
+  note: string;
+  markedAt: string;
+}
+
+/** A safeguarding/concern report captured by /report. Demo: stored locally. */
+export interface ConcernReport {
+  id: string;
+  kind: string;
+  detail: string;
+  replyEmail?: string;
+  submittedAt: string;
+}
+
+/** Audit trail entry for the provider-content review workflow. */
+export interface AuditEntry {
+  at: string;
+  by: string;
+  action: string;
+  detail?: string;
 }

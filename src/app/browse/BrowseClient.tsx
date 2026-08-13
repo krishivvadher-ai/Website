@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { EVENTS } from "@/lib/events";
+import { publishedEvents } from "@/lib/events";
 import { DEFAULT_FILTERS, type Filters } from "@/lib/types";
 import { applyFilters } from "@/lib/filter";
 import { useApp } from "@/lib/store";
@@ -26,7 +26,7 @@ export function BrowseClient() {
   }, [initialQuery]);
 
   const { events, loosenHint } = useMemo(
-    () => applyFilters(EVENTS, filters, profile),
+    () => applyFilters(publishedEvents(), filters, profile),
     [filters, profile]
   );
 

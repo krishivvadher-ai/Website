@@ -74,7 +74,7 @@ export default function LandingPage() {
           <div>
             <h2 className="text-[28px] lg:text-[40px]">Run something worth doing?</h2>
             <p className="mt-3 text-grey measure">
-              List it free. Reach 13–25 year olds who are actually looking, with tools that write
+              List it free. Reach 13–18 year olds who are actually looking, with tools that write
               the listing with you and catch age-band mistakes before they cost you attendees.
             </p>
           </div>

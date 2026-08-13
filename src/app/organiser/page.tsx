@@ -29,7 +29,7 @@ export default function OrganiserPage() {
       <div className="max-w-[640px] mx-auto px-6 py-16">
         <h1 className="text-[28px] lg:text-[40px]">Organiser dashboard</h1>
         <p className="mt-3 text-grey measure">
-          List events free, reach 13–25 year olds who are actually looking, and get tools that
+          List events free, reach 13–18 year olds who are actually looking, and get tools that
           write listings with you and catch age-band mistakes before they cost you attendees.
         </p>
         <div className="card mt-8 p-6">
@@ -457,7 +457,7 @@ function BalanceMonitor() {
       <p className={`mt-3 text-[14px] font-medium ${flagged ? "text-coral" : ""}`}>
         {flagged
           ? "⚠ The mix has drifted — one side is under 35% of the local feed."
-          : "Across the UK: the mix is healthy."}
+          : "East London: the mix is healthy."}
       </p>
     </section>
   );

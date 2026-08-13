@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { EVENTS } from "@/lib/events";
+import { publishedEvents } from "@/lib/events";
 import { DEFAULT_FILTERS, type Filters, type OnTrackEvent } from "@/lib/types";
 import { applyFilters } from "@/lib/filter";
 import { DEFAULT_LOCATION } from "@/lib/geo";
@@ -104,7 +104,7 @@ function MapView({
   const selectRef = useRef<(id: string, pan: boolean) => void>(() => {});
 
   const { events } = useMemo(
-    () => applyFilters(EVENTS, filters, profile, DEFAULT_LOCATION),
+    () => applyFilters(publishedEvents(), filters, profile, DEFAULT_LOCATION),
     [filters, profile]
   );
 
@@ -132,8 +132,8 @@ function MapView({
     });
     mapRef.current = map;
 
-    // Show the whole UK with every pin clear of the floating UI
-    const bounds = eventsBounds(EVENTS);
+    // Show the whole launch area with every pin clear of the floating UI
+    const bounds = eventsBounds(publishedEvents());
     if (bounds) {
       map.fitBounds(bounds, {
         padding: isDesktop
@@ -177,7 +177,7 @@ function MapView({
   }, [isDesktop]);
 
   // Radius circle follows the slider (only when a radius is set — the
-  // default is the whole UK)
+  // default is all of London)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;

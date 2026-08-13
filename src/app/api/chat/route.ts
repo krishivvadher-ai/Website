@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { findHelpTopic, HELP_TOPICS } from "@/lib/helpContent";
-import { EVENTS } from "@/lib/events";
+import { publishedEvents } from "@/lib/events";
 import { formatDate } from "@/lib/format";
 import { eventAgeBadge } from "@/lib/age";
 
@@ -39,11 +39,11 @@ const CRISIS_RESPONSE =
   "It sounds like you might be going through something serious. This chat is only for event questions, but you deserve real support: Childline is free on 0800 1111 (under 19), Samaritans on 116 123 (any age, any time), or text SHOUT to 85258. If you're in immediate danger, call 999. The onTrack team is also reachable via Talk to a person above.";
 
 function systemPrompt(): string {
-  const eventSummaries = EVENTS.slice(0, 40)
+  const eventSummaries = publishedEvents().slice(0, 40)
     .map((e) => `- ${e.title} | ${formatDate(e.date)} | ${e.venue.area} | ${eventAgeBadge(e)} | ${e.price === 0 ? "Free" : `£${(e.price / 100).toFixed(2)}`}${e.applicationDeadline ? ` | applications close ${formatDate(e.applicationDeadline)}` : ""}`)
     .join("\n");
   const help = HELP_TOPICS.map((t) => `## ${t.title}\n${t.answer}`).join("\n\n");
-  return `You are the onTrack support assistant. onTrack helps 13–25 year olds across the UK find and track events.
+  return `You are the onTrack support assistant. onTrack helps 13–18 year olds in East London find and track events.
 
 You are a support tool with a defined job, not a companion. Many users are minors. Hard rules:
 - Answer ONLY questions about: age eligibility, application deadlines, refunds, ticket transfers, what fees cover, how to find events, and venue accessibility. For anything else say you can't help with that here and point to "Talk to a person".

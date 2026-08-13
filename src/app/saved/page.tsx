@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { EVENTS } from "@/lib/events";
+import { publishedEvents } from "@/lib/events";
 import { useApp } from "@/lib/store";
 import { visibleToProfile } from "@/lib/age";
 import { EventCard, EventCardSkeleton } from "@/components/EventCard";
@@ -10,7 +10,7 @@ import { EventCard, EventCardSkeleton } from "@/components/EventCard";
 export default function SavedPage() {
   const { ready, saved, profile } = useApp();
   // Age filtering applies to saved items too — it applies everywhere.
-  const events = EVENTS.filter((e) => saved.includes(e.id) && visibleToProfile(e, profile)).sort(
+  const events = publishedEvents().filter((e) => saved.includes(e.id) && visibleToProfile(e, profile)).sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 

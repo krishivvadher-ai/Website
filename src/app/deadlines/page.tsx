@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { EVENTS } from "@/lib/events";
+import { publishedEvents } from "@/lib/events";
 import { useApp } from "@/lib/store";
 import { visibleToProfile } from "@/lib/age";
 import type { OnTrackEvent, ReminderPrefs } from "@/lib/types";
@@ -22,7 +22,7 @@ const DEFAULT_REMINDERS: ReminderPrefs = {
 export default function DeadlinesPage() {
   const { ready, saved, profile, reminders, setReminder } = useApp();
 
-  const savedEvents = EVENTS.filter((e) => saved.includes(e.id) && visibleToProfile(e, profile));
+  const savedEvents = publishedEvents().filter((e) => saved.includes(e.id) && visibleToProfile(e, profile));
   const withDeadline = savedEvents.filter((e) => e.applicationDeadline);
   const open = withDeadline
     .filter((e) => !deadlinePassed(e.applicationDeadline!))
