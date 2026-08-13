@@ -12,19 +12,19 @@ export const metadata: Metadata = {
 
 const FOUNDERS = [
   {
-    name: "[Founder name — TODO]",
-    role: "Co-founder — product",
-    note: "Leads the consumer product and the research programme with young Londoners.",
+    name: "Vanessa",
+    role: "Co-founder · CEO & CCO",
+    note: "Leads the company and the research programme with young Londoners — including the 96-person survey the product is built on.",
   },
   {
-    name: "[Founder name — TODO]",
-    role: "Co-founder — partnerships",
-    note: "Leads borough, school and organiser relationships across East London.",
+    name: "Abishek",
+    role: "Co-founder · CMO",
+    note: "Leads growth through the channels teenagers actually use: shared links, group chats, and the boroughs and schools around them.",
   },
   {
-    name: "[Founder name — TODO]",
-    role: "Co-founder — operations & safeguarding",
-    note: "Leads trust, safety and the editorial review of every listing.",
+    name: "Krishiv",
+    role: "Co-founder · CTO & CFO",
+    note: "Builds the product and the model behind it — no ad tech, no take rate, and an architecture designed for the Children's Code.",
   },
 ];
 

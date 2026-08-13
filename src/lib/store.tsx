@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { AttendedEntry, AuditEntry, ConcernReport, Profile, ReminderPrefs } from "./types";
+import type { AttendedEntry, AuditEntry, Booking, ConcernReport, Profile, ReminderPrefs } from "./types";
 
 export interface PendingListing {
   id: string;
@@ -28,12 +28,20 @@ interface AppState {
   setReminder: (eventId: string, prefs: ReminderPrefs | null) => void;
   attended: Record<string, AttendedEntry>;
   setAttended: (eventId: string, entry: AttendedEntry | null) => void;
+  bookings: Record<string, Booking>;
+  book: (eventId: string, places: number) => Booking;
+  cancelBooking: (eventId: string) => void;
   reports: ConcernReport[];
   addReport: (r: Omit<ConcernReport, "id" | "submittedAt">) => void;
   pendingListings: PendingListing[];
   addPendingListing: (l: Omit<PendingListing, "id" | "status" | "audit">) => void;
   organiserSignedIn: boolean;
   setOrganiserSignedIn: (v: boolean) => void;
+  schoolSignedIn: boolean;
+  setSchoolSignedIn: (v: boolean) => void;
+  /** events a school staff member has featured for their students */
+  schoolPicks: string[];
+  toggleSchoolPick: (eventId: string) => void;
   /** the whole local state as JSON — powers "download my data" */
   exportData: () => string;
   /** wipe everything this device knows — powers "delete my account" */
@@ -51,9 +59,12 @@ interface Persisted {
   saved: string[];
   reminders: Record<string, ReminderPrefs>;
   attended: Record<string, AttendedEntry>;
+  bookings: Record<string, Booking>;
   reports: ConcernReport[];
   pendingListings: PendingListing[];
   organiserSignedIn: boolean;
+  schoolSignedIn: boolean;
+  schoolPicks: string[];
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -62,9 +73,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [saved, setSaved] = useState<string[]>([]);
   const [reminders, setReminders] = useState<Record<string, ReminderPrefs>>({});
   const [attended, setAttendedState] = useState<Record<string, AttendedEntry>>({});
+  const [bookings, setBookings] = useState<Record<string, Booking>>({});
   const [reports, setReports] = useState<ConcernReport[]>([]);
   const [pendingListings, setPendingListings] = useState<PendingListing[]>([]);
   const [organiserSignedIn, setOrganiserSignedIn] = useState(false);
+  const [schoolSignedIn, setSchoolSignedIn] = useState(false);
+  const [schoolPicks, setSchoolPicks] = useState<string[]>([]);
 
   useEffect(() => {
     try {
@@ -75,9 +89,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (Array.isArray(data.saved)) setSaved(data.saved);
         if (data.reminders) setReminders(data.reminders);
         if (data.attended) setAttendedState(data.attended);
+        if (data.bookings) setBookings(data.bookings);
         if (Array.isArray(data.reports)) setReports(data.reports);
         if (Array.isArray(data.pendingListings)) setPendingListings(data.pendingListings);
         if (data.organiserSignedIn) setOrganiserSignedIn(true);
+        if (data.schoolSignedIn) setSchoolSignedIn(true);
+        if (Array.isArray(data.schoolPicks)) setSchoolPicks(data.schoolPicks);
       }
     } catch {
       // corrupted storage — start fresh rather than crash
@@ -87,13 +104,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!ready) return;
-    const data: Persisted = { profile, saved, reminders, attended, reports, pendingListings, organiserSignedIn };
+    const data: Persisted = { profile, saved, reminders, attended, bookings, reports, pendingListings, organiserSignedIn, schoolSignedIn, schoolPicks };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
       // storage full or unavailable — the app still works, it just forgets
     }
-  }, [ready, profile, saved, reminders, attended, reports, pendingListings, organiserSignedIn]);
+  }, [ready, profile, saved, reminders, attended, bookings, reports, pendingListings, organiserSignedIn, schoolSignedIn, schoolPicks]);
 
   const setProfile = useCallback((p: Profile) => setProfileState(p), []);
   const toggleSaved = useCallback((id: string) => {
@@ -113,6 +130,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const next = { ...prev };
       if (entry === null) delete next[id];
       else next[id] = entry;
+      return next;
+    });
+  }, []);
+  const book = useCallback((eventId: string, places: number): Booking => {
+    // Reference is derived, not random-random, so it stays stable-looking in
+    // a demo: OT- plus base36 of time and event id
+    const ref = `OT-${(Date.now() % 46655).toString(36).toUpperCase().padStart(3, "0")}${eventId.slice(-2).toUpperCase()}${places}`;
+    const booking: Booking = { ref, places, bookedAt: new Date().toISOString() };
+    setBookings((prev) => ({ ...prev, [eventId]: booking }));
+    // A booked event is a saved event — its deadline and date belong in the
+    // Deadlines tab
+    setSaved((prev) => (prev.includes(eventId) ? prev : [...prev, eventId]));
+    return booking;
+  }, []);
+  const cancelBooking = useCallback((eventId: string) => {
+    setBookings((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
       return next;
     });
   }, []);
@@ -142,18 +177,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const exportData = useCallback(() => {
-    const data: Persisted = { profile, saved, reminders, attended, reports, pendingListings, organiserSignedIn };
+    const data: Persisted = { profile, saved, reminders, attended, bookings, reports, pendingListings, organiserSignedIn, schoolSignedIn, schoolPicks };
     return JSON.stringify(data, null, 2);
-  }, [profile, saved, reminders, attended, reports, pendingListings, organiserSignedIn]);
+  }, [profile, saved, reminders, attended, bookings, reports, pendingListings, organiserSignedIn, schoolSignedIn, schoolPicks]);
+
+  const toggleSchoolPick = useCallback((id: string) => {
+    setSchoolPicks((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
 
   const deleteAllData = useCallback(() => {
     setProfileState(DEFAULT_PROFILE);
     setSaved([]);
     setReminders({});
     setAttendedState({});
+    setBookings({});
     setReports([]);
     setPendingListings([]);
     setOrganiserSignedIn(false);
+    setSchoolSignedIn(false);
+    setSchoolPicks([]);
     try {
       // Clear everything onTrack has ever put on this device, including the
       // age-gate flag — deletion means deletion.
@@ -177,12 +219,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setReminder,
       attended,
       setAttended,
+      bookings,
+      book,
+      cancelBooking,
       reports,
       addReport,
       pendingListings,
       addPendingListing,
       organiserSignedIn,
       setOrganiserSignedIn,
+      schoolSignedIn,
+      setSchoolSignedIn,
+      schoolPicks,
+      toggleSchoolPick,
       exportData,
       deleteAllData,
     }),
@@ -197,11 +246,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setReminder,
       attended,
       setAttended,
+      bookings,
+      book,
+      cancelBooking,
       reports,
       addReport,
       pendingListings,
       addPendingListing,
       organiserSignedIn,
+      schoolSignedIn,
+      schoolPicks,
+      toggleSchoolPick,
       exportData,
       deleteAllData,
     ]

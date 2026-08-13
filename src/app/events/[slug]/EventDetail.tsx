@@ -13,6 +13,7 @@ import { useIsDesktop } from "@/lib/useMediaQuery";
 import { CardImage } from "@/components/CardImage";
 import { AgeBadge, PriceTag, VerifiedBadge } from "@/components/badges";
 import { ShareActions } from "@/components/ShareActions";
+import { BookingModal, Ticket } from "@/components/BookingFlow";
 
 const VenueMap = dynamic(() => import("@/components/VenueMap").then((m) => m.VenueMap), {
   ssr: false,
@@ -20,14 +21,16 @@ const VenueMap = dynamic(() => import("@/components/VenueMap").then((m) => m.Ven
 });
 
 export function EventDetail({ event }: { event: OnTrackEvent }) {
-  const { isSaved, toggleSaved, attended, setAttended } = useApp();
+  const { isSaved, toggleSaved, attended, setAttended, bookings, cancelBooking } = useApp();
   const isDesktop = useIsDesktop();
   const saved = isSaved(event.id);
   const [toast, setToast] = useState<string | null>(null);
+  const [bookingOpen, setBookingOpen] = useState(false);
   const category = categoryBySlug(event.category);
   const miles = eventDistance(event);
   const flag = deadlineFlag(event.applicationDeadline);
   const closed = event.applicationDeadline ? deadlinePassed(event.applicationDeadline) : false;
+  const booking = bookings[event.id];
 
   const onSave = () => {
     toggleSaved(event.id);
@@ -43,15 +46,32 @@ export function EventDetail({ event }: { event: OnTrackEvent }) {
         <PriceTag event={event} />
         <AgeBadge event={event} />
       </div>
-      {flag && <p className="mt-3 text-[14px] font-semibold text-coral-deep">{flag}</p>}
-      <button
-        type="button"
-        disabled={closed}
-        onClick={() => setToast("This is a demo — booking opens with the full launch")}
-        className="mt-4 w-full min-h-[48px] rounded-full bg-signal text-ink border border-ink font-display font-semibold text-[16px] disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        {cta}
-      </button>
+      {flag && !booking && <p className="mt-3 text-[14px] font-semibold text-coral-deep">{flag}</p>}
+      {booking ? (
+        <div className="mt-4">
+          <Ticket event={event} booking={booking} />
+          <button
+            type="button"
+            onClick={() => {
+              cancelBooking(event.id);
+              setToast("Booking cancelled");
+              window.setTimeout(() => setToast(null), 2000);
+            }}
+            className="mt-3 w-full min-h-[44px] rounded-full border border-line text-[14px] font-medium text-grey hover:border-ink hover:text-ink"
+          >
+            Cancel my booking
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          disabled={closed}
+          onClick={() => setBookingOpen(true)}
+          className="mt-4 w-full min-h-[48px] rounded-full bg-signal text-ink border border-ink font-display font-semibold text-[16px] disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {cta}
+        </button>
+      )}
       <button
         type="button"
         onClick={onSave}
@@ -173,11 +193,11 @@ export function EventDetail({ event }: { event: OnTrackEvent }) {
             </button>
             <button
               type="button"
-              disabled={closed}
-              onClick={() => setToast("This is a demo — booking opens with the full launch")}
+              disabled={closed && !booking}
+              onClick={() => setBookingOpen(true)}
               className="min-h-[44px] px-5 rounded-full bg-signal text-ink border border-ink font-display font-semibold text-[15px] disabled:opacity-40"
             >
-              {cta}
+              {booking ? "My ticket" : cta}
             </button>
           </div>
         </div>
@@ -191,6 +211,8 @@ export function EventDetail({ event }: { event: OnTrackEvent }) {
           {toast}
         </div>
       )}
+
+      <BookingModal event={event} open={bookingOpen} onClose={() => setBookingOpen(false)} />
     </div>
   );
 }

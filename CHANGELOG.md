@@ -1,5 +1,36 @@
 # Changelog
 
+## pitch-prep (round 2) — 13 August 2026
+
+### Demo bookings
+- Full booking flow on every event page: places selector (1–4), all-in
+  total, confirmation with a booking reference and a ticket (with a demo
+  barcode), cancellation, persistence across reloads. Bookings collect no
+  name, email or payment details — device-local by design; the modal says
+  so. Booked events auto-save, show a Booked pill on cards, and lead a
+  Booked section on /saved.
+
+### Organiser dashboard rebuilt (per the pitch deck)
+- Six tabs: Overview (stats incl. bookings, 30-day views chart, closing-
+  soon, review queue, balance monitor), Listings (live table + pending
+  audit queue), Submit (assistant + manual), Audience (view→save→booking
+  funnel, views by borough, age-band mix, traffic sources — aggregate-only,
+  stated), Safeguarding (verification checklist, eligibility checker),
+  Plan & billing (Boost tier, invoices, pricing guidance).
+- **⚠ review**: the "AI-generated — check every field" marker is restored
+  on assistant drafts because pitch deck slide 21 claims it; this reverses
+  an earlier request to remove it. Easy to soften again if preferred.
+
+### School dashboard (the £995/year product)
+- /schools/dashboard behind demo staff sign-in: aggregate stats, staff
+  picks that actually reorder the public school page, a printable 30-day
+  deadline digest, and a destinations snapshot. Aggregate-only banner —
+  no individual student data exists to show.
+
+### From the pitch deck
+- /about now names the founders (Vanessa — CEO/CCO, Abishek — CMO,
+  Krishiv — CTO/CFO) and reflects the survey framing.
+
 ## pitch-prep — 13 August 2026
 
 Everything below was built on the `pitch-prep` branch, grouped by package.

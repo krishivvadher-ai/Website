@@ -23,8 +23,9 @@ export function EventCard({
   onHover?: (id: string | null) => void;
   highlighted?: boolean;
 }) {
-  const { isSaved, toggleSaved } = useApp();
+  const { isSaved, toggleSaved, bookings } = useApp();
   const saved = isSaved(event.id);
+  const booked = !!bookings[event.id];
   const miles = eventDistance(event);
   const category = categoryBySlug(event.category);
 
@@ -71,7 +72,11 @@ export function EventCard({
         </p>
         <VerifiedBadge level={event.organiserVerified} />
         <div className="mt-auto pt-2 flex items-end justify-between gap-3 border-t border-line">
-          <DeadlineFlag iso={event.applicationDeadline} />
+          {booked ? (
+            <span className="pill bg-ink text-signal px-2.5 py-1 font-semibold">Booked</span>
+          ) : (
+            <DeadlineFlag iso={event.applicationDeadline} />
+          )}
           <span className="ml-auto">
             <PriceTag event={event} />
           </span>

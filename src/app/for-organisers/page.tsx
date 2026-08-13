@@ -99,6 +99,10 @@ export default function ForOrganisersPage() {
         Boroughs (£6,000/year) and schools and colleges (£995/year) have their own products —{" "}
         <Link href="/boroughs/tower-hamlets" className="underline">
           see a live borough page
+        </Link>
+        , try the{" "}
+        <Link href="/schools/dashboard" className="underline">
+          school staff dashboard
         </Link>{" "}
         or <Link href="/contact" className="underline">talk to us</Link>.
       </p>

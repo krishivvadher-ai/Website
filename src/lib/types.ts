@@ -116,6 +116,17 @@ export interface ReminderPrefs {
   channel: "email" | "push";
 }
 
+/**
+ * A demo booking — stored only on this device. Deliberately collects no
+ * name, email or payment details: in the live product the confirmation goes
+ * to the organiser, and this record stays the user's ticket stub.
+ */
+export interface Booking {
+  ref: string;
+  places: number;
+  bookedAt: string;
+}
+
 /** A "What I've done" entry — stored only on this device, never sent anywhere. */
 export interface AttendedEntry {
   /** user's own one-line note on what they got from it */

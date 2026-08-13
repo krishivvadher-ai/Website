@@ -76,16 +76,24 @@ export default async function SchoolPage({ params }: { params: Promise<{ slug: s
         <div>
           <h2 className="text-[28px]">For schools and colleges</h2>
           <p className="mt-2 text-paper/70 measure">
-            A page like this under your school’s name, staff picks, and destinations-friendly
-            reporting on what your students attended — £995 a year, unlimited students.
+            A page like this under your school’s name, staff picks, a deadline digest and
+            destinations-friendly reporting — £995 a year, unlimited students.
           </p>
         </div>
-        <Link
-          href="/contact"
-          className="mt-5 md:mt-0 inline-flex shrink-0 items-center min-h-[48px] px-7 rounded-full bg-signal text-ink font-display font-semibold"
-        >
-          Talk to us
-        </Link>
+        <div className="mt-5 md:mt-0 flex shrink-0 flex-wrap gap-3">
+          <Link
+            href="/schools/dashboard"
+            className="inline-flex items-center min-h-[48px] px-7 rounded-full border border-paper text-paper font-display font-semibold hover:bg-paper hover:text-ink transition-colors"
+          >
+            Try the staff dashboard
+          </Link>
+          <Link
+            href="/contact"
+            className="inline-flex items-center min-h-[48px] px-7 rounded-full bg-signal text-ink font-display font-semibold"
+          >
+            Talk to us
+          </Link>
+        </div>
       </section>
     </div>
   );
