@@ -124,7 +124,7 @@ function DeadlineRow({
               {event.title}
             </Link>
           </h3>
-          <p className={`mt-1 text-[14px] font-medium ${urgent ? "text-coral" : "text-ink"}`}>
+          <p className={`mt-1 text-[14px] font-medium ${urgent ? "text-coral-deep" : "text-ink"}`}>
             {days === 0 ? "Closes today" : days === 1 ? "Closes tomorrow" : `Closes in ${days} days`} —{" "}
             {formatDateLong(event.applicationDeadline!)}
           </p>

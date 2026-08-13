@@ -157,7 +157,7 @@ function ListingsTable() {
                 <tr key={e.id} className="border-b border-line last:border-0 align-top">
                   <td className="py-3 pr-4">
                     <p className="font-medium leading-tight">{e.title}</p>
-                    {flag && <p className="mt-0.5 text-[12px] text-coral font-medium">{flag}</p>}
+                    {flag && <p className="mt-0.5 text-[12px] text-coral-deep font-medium">{flag}</p>}
                   </td>
                   <td className="py-3 pr-4 whitespace-nowrap">{formatDate(e.date)}</td>
                   <td className="py-3 pr-4">
@@ -319,7 +319,7 @@ function ListingAssistant() {
           >
             {busy ? "Drafting…" : draft ? "Redraft" : "Draft the listing"}
           </button>
-          {error && <p className="mt-2 text-[13px] text-coral">{error}</p>}
+          {error && <p className="mt-2 text-[13px] text-coral-deep">{error}</p>}
 
           {draft && (
             <div className="mt-5 border-t border-line pt-5">
@@ -340,7 +340,7 @@ function ListingAssistant() {
               </div>
 
               {draft.warnings.map((w, i) => (
-                <p key={i} className="mt-3 text-[13px] text-coral font-medium">
+                <p key={i} className="mt-3 text-[13px] text-coral-deep font-medium">
                   ⚠ {w}
                 </p>
               ))}
@@ -578,7 +578,7 @@ function BalanceMonitor() {
         <Bar label={`Fun (${fun} + ${both} both)`} share={funShare} />
         <Bar label={`Useful (${useful} + ${both} both)`} share={usefulShare} />
       </div>
-      <p className={`mt-3 text-[14px] font-medium ${flagged ? "text-coral" : ""}`}>
+      <p className={`mt-3 text-[14px] font-medium ${flagged ? "text-coral-deep" : ""}`}>
         {flagged
           ? "⚠ The mix has drifted — one side is under 35% of the local feed."
           : "East London: the mix is healthy."}
@@ -644,7 +644,7 @@ function EligibilityChecker() {
           {issues.map((i, idx) => (
             <li key={idx} className="text-[14px]">
               <span className="font-medium">{i.title}</span>
-              <span className="block text-[13px] text-coral">{i.note}</span>
+              <span className="block text-[13px] text-coral-deep">{i.note}</span>
             </li>
           ))}
         </ul>
@@ -740,7 +740,7 @@ function PerformanceSummary() {
           </ul>
         </div>
         {nextClash && (
-          <p className="text-[13px] text-coral">
+          <p className="text-[13px] text-coral-deep">
             ⚠ Timing clash: “{nextClash.a}” and “{nextClash.b}” are both {nextClash.date} in the
             same category.
           </p>

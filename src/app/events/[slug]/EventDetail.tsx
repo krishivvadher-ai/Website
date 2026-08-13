@@ -43,7 +43,7 @@ export function EventDetail({ event }: { event: OnTrackEvent }) {
         <PriceTag event={event} />
         <AgeBadge event={event} />
       </div>
-      {flag && <p className="mt-3 text-[14px] font-semibold text-coral">{flag}</p>}
+      {flag && <p className="mt-3 text-[14px] font-semibold text-coral-deep">{flag}</p>}
       <button
         type="button"
         disabled={closed}
@@ -159,7 +159,7 @@ export function EventDetail({ event }: { event: OnTrackEvent }) {
         <div className="fixed inset-x-0 bottom-14 z-30 bg-paper border-t border-line px-4 py-3 tabbar-safe">
           <div className="flex items-center gap-4">
             <PriceTag event={event} />
-            {flag && <span className="text-[12px] font-semibold text-coral leading-tight">{flag}</span>}
+            {flag && <span className="text-[12px] font-semibold text-coral-deep leading-tight">{flag}</span>}
             <button
               type="button"
               onClick={onSave}

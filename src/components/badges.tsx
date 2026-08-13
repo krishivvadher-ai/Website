@@ -44,7 +44,7 @@ export function PriceTag({ event }: { event: Pick<OnTrackEvent, "price" | "feeBr
 export function DeadlineFlag({ iso }: { iso?: string }) {
   const flag = deadlineFlag(iso);
   if (!flag) return null;
-  return <span className="text-[13px] font-semibold text-coral">{flag}</span>;
+  return <span className="text-[13px] font-semibold text-coral-deep">{flag}</span>;
 }
 
 /**

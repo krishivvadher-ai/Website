@@ -265,7 +265,7 @@ function MapView({
     }
   }, [events, selectedId, hoveredId, mapFailed, zoomStamp, isDesktop, mapReady]);
 
-  const useMyLocation = () => {
+  const requestMyLocation = () => {
     setLocNote(false);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -380,7 +380,7 @@ function MapView({
           <div className="mt-3 flex items-center gap-2 flex-wrap">
             <button
               type="button"
-              onClick={() => (locNote ? useMyLocation() : setLocNote(true))}
+              onClick={() => (locNote ? requestMyLocation() : setLocNote(true))}
               className="min-h-[44px] px-4 rounded-full border border-line bg-white text-[13px] font-medium"
             >
               Use my location
@@ -388,7 +388,7 @@ function MapView({
             {locNote && (
               <span className="text-[12px] text-grey bg-white border border-line rounded-lg px-3 py-2">
                 Used once to centre the map — never stored.{" "}
-                <button type="button" className="underline text-ink" onClick={useMyLocation}>
+                <button type="button" className="underline text-ink" onClick={requestMyLocation}>
                   OK
                 </button>
               </span>
